@@ -6,8 +6,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.20" apply false
 }
 
-group = "com.dayushmand.pathsense"
-version = "0.1.0-SNAPSHOT"
+group = "com.dayushman.pathsense"
+version = "0.0.1-alpha"
 
 subprojects {
     group = rootProject.group
