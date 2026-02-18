@@ -15,9 +15,13 @@ kotlin {
             }
         }
     }
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    val xcf = org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFrameworkConfig(project, "PathSenseCore")
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework {
+            baseName = "PathSenseCore"
+            xcf.add(this)
+        }
+    }
 
     sourceSets {
         val commonMain by getting {

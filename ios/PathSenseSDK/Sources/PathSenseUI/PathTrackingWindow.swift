@@ -39,18 +39,18 @@ public final class PathTrackingWindow: UIWindow {
         switch touch.phase {
         case .began:
             tracker.onDown(p: pathPoint)
-            overlayView.resetFade()
+            overlayView.notifyTouchStart(at: point)
         case .moved:
             tracker.onMove(p: pathPoint)
+            overlayView.notifyTouchMove(to: point)
         case .ended:
             tracker.onUp(p: pathPoint)
-            overlayView.startFadeIfNeeded()
+            overlayView.notifyTouchEnd(at: point)
         case .cancelled:
             tracker.onCancel()
-            overlayView.startFadeIfNeeded()
+            overlayView.notifyTouchCancel()
         default:
             break
         }
-        overlayView.setNeedsDisplay()
     }
 }

@@ -37,6 +37,13 @@ Pods/
 !default.perspectivev3
 xcuserdata/
 
+# Generated Xcode projects (regenerate with `xcodegen generate`)
+samples/ios-swiftui/PathSenseSwiftUISample.xcodeproj/
+samples/ios-uikit/PathSenseUIKitSample.xcodeproj/
+
+# Generated XCFramework (rebuild with gradle assemblePathSenseCoreXCFramework)
+ios/PathSenseSDK/PathSenseCore.xcframework/
+
 # Swift Package Manager
 .build/
 .swiftpm/

@@ -1,0 +1,36 @@
+name: PathSenseSwiftUISample
+options:
+  bundleIdPrefix: com.dayushmand.pathsense.sample
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "14.3"
+
+packages:
+  PathSenseSDK:
+    path: "../../ios/PathSenseSDK"
+
+targets:
+  PathSenseSwiftUISample:
+    type: application
+    platform: iOS
+    sources:
+      - PathSenseSwiftUISample
+    dependencies:
+      - package: PathSenseSDK
+        product: PathSenseCore
+      - package: PathSenseSDK
+        product: PathSenseUI
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "-"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        SWIFT_VERSION: "5.0"
+    info:
+      path: PathSenseSwiftUISample/Info.plist
+      properties:
+        CFBundleDisplayName: PathSense SwiftUI Sample
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false

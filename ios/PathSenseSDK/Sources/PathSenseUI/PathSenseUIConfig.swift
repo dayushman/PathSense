@@ -28,6 +28,8 @@ public struct PathOverlayConfig {
     public var showTouchCircle: Bool = true
     public var showCoordinateHUD: Bool = false
     public var hudAlignment: HUDAlignment = .topLeft
+    public var hudTextColor: UIColor = .white
+    public var hudBackgroundColor: UIColor = UIColor.black.withAlphaComponent(0.7)
 
     public init() {}
 }

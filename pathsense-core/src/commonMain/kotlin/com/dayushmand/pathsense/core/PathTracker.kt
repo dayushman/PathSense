@@ -11,6 +11,9 @@ import kotlin.math.roundToLong
 import kotlin.random.Random
 
 class PathTracker(private val config: PathConfig = PathConfig()) {
+    // Needed for Swift interop — KMM doesn't export default param values to ObjC/Swift
+    constructor() : this(PathConfig())
+
     var listener: (PathEvent) -> Unit = {}
 
     private val buffer = PointBuffer(config.maxPoints)

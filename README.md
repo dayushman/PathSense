@@ -159,6 +159,19 @@ PathCaptureRepresentable(
 
 ---
 
+## Samples
+
+| Sample                    | Platform | Integration                             | Key Code                                                               |
+| ------------------------- | -------- | --------------------------------------- | ---------------------------------------------------------------------- |
+| `samples/android-compose` | Android  | Zero-config (auto-attach)               | `PathSense.init(this, config)` in `Application.onCreate()`             |
+| `samples/android-view`    | Android  | Zero-config (auto-attach)               | `PathSense.init(this, config)` in `Application.onCreate()`             |
+| `samples/ios-swiftui`     | iOS      | View-level (`PathCaptureRepresentable`) | `PathCaptureRepresentable(tracker:overlayConfig:)` in a SwiftUI `View` |
+| `samples/ios-uikit`       | iOS      | Window-level (`PathTrackingWindow`)     | `PathTrackingWindow` replacing `UIWindow` in `SceneDelegate`           |
+
+All samples show "Draw anywhere on screen" — touch and drag to see the gradient trail, touch circle, and coordinate HUD.
+
+---
+
 ## Core API
 
 ### Models
@@ -329,7 +342,9 @@ PathSenseSDK/
 │       └── androidTest/               # Android instrumentation tests
 ├── samples/
 │   ├── android-compose/               # Compose sample app
-│   └── android-view/                  # View-based sample app
+│   ├── android-view/                  # View-based sample app
+│   ├── ios-swiftui/                   # SwiftUI sample app
+│   └── ios-uikit/                     # UIKit sample app
 ├── ios/PathSenseSDK/                  # Swift Package
 │   ├── Package.swift
 │   ├── Sources/
@@ -359,7 +374,7 @@ iOS consumers add only the targets they need — `PathSenseUI` depends on `PathS
 - **JDK 17+**
 - **Android SDK** (compileSdk 34, minSdk 21)
 - **Kotlin 2.0.20**
-- **Xcode 15+** (for iOS targets)
+- **Xcode 14.3+** (for iOS targets)
 
 ### Build Android
 
@@ -369,8 +384,25 @@ iOS consumers add only the targets they need — `PathSenseUI` depends on `PathS
 
 ### Build Sample Apps
 
+**Android:**
+
 ```bash
 ./gradlew :samples:android-compose:assembleDebug :samples:android-view:assembleDebug
+```
+
+**iOS (requires [xcodegen](https://github.com/yonaskolb/XcodeGen)):**
+
+```bash
+# Generate Xcode projects
+cd samples/ios-swiftui && xcodegen generate && cd ../..
+cd samples/ios-uikit && xcodegen generate && cd ../..
+
+# Build
+xcodebuild -project samples/ios-swiftui/PathSenseSwiftUISample.xcodeproj \
+  -scheme PathSenseSwiftUISample -destination 'generic/platform=iOS Simulator' build
+
+xcodebuild -project samples/ios-uikit/PathSenseUIKitSample.xcodeproj \
+  -scheme PathSenseUIKitSample -destination 'generic/platform=iOS Simulator' build
 ```
 
 ### Run Tests
@@ -383,7 +415,14 @@ iOS consumers add only the targets they need — `PathSenseUI` depends on `PathS
 ### Build iOS XCFramework
 
 ```bash
-./gradlew :pathsense-core:assembleXCFramework
+./gradlew :pathsense-core:assemblePathSenseCoreXCFramework
+```
+
+Then copy the output into the SPM package:
+
+```bash
+cp -R pathsense-core/build/XCFrameworks/debug/PathSenseCore.xcframework \
+  ios/PathSenseSDK/PathSenseCore.xcframework
 ```
 
 ---
