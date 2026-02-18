@@ -58,20 +58,28 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["kotlin"])
+afterEvaluate {
+    publishing {
+        publications.withType<MavenPublication> {
             groupId = project.group.toString()
-            artifactId = "pathsense-core"
             version = project.version.toString()
+
+            pom {
+                name.set("PathSense Core")
+                description.set("Core gesture recognition SDK for Android and iOS")
+            }
         }
     }
 }
 
 signing {
-    // Configure signing credentials in your Gradle user home or CI secrets.
+    isRequired = findProperty("signing.keyId") != null
     sign(publishing.publications)
 }
