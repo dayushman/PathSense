@@ -41,8 +41,6 @@ xcuserdata/
 samples/ios-swiftui/PathSenseSwiftUISample.xcodeproj/
 samples/ios-uikit/PathSenseUIKitSample.xcodeproj/
 
-# Generated XCFramework (rebuild with gradle assemblePathSenseCoreXCFramework)
-ios/PathSenseSDK/PathSenseCore.xcframework/
 
 # Swift Package Manager
 .build/
