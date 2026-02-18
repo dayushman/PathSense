@@ -41,7 +41,7 @@ dependencies {
 }
 ```
 
-> Replace `<version>` with a release tag (e.g. `0.1.0`) or a commit hash. Use `main-SNAPSHOT` for the latest commit on `main`.
+> Replace `<version>` with a release tag (e.g. `0.1.0`) or a commit hash. Use `master-SNAPSHOT` for the latest commit on `master`.
 
 ### iOS (Swift Package Manager)
 
