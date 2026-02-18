@@ -12,7 +12,7 @@ A **Kotlin Multiplatform** SDK for touch-path capture, real-time smoothing, metr
 - **Visual overlays** (opt-in) — gradient trail, crosshair lines, touch circle, and built-in coordinate HUD
 - **Live coordinate HUD** — pill-shaped label showing `x: y: dx: dy:` with delta from start point, monospace font, fully customizable colors and position
 - **Edge-to-edge safe** — HUD automatically insets away from status bar and navigation bar on Android 15+ and `enableEdgeToEdge()` apps
-- **Zero-config integration** — one-line `PathSense.init(app)` auto-attaches to all Activities on Android
+- **Zero-config integration** — one-line setup auto-attaches to all Activities (Android) and all Windows (iOS)
 - **Memory-bounded** — FIFO ring buffer caps point storage (default 500), preventing unbounded growth
 - **Zero touch-to-pixel latency** — smoothing runs inline on the main thread; heavy math is offloaded to background
 
@@ -30,17 +30,17 @@ A **Kotlin Multiplatform** SDK for touch-path capture, real-time smoothing, metr
                     │ depends on
 ┌───────────────────▼───────────────────────────┐
 │                 pathsense-ui                  │   ← Opt-in rendering
-│  PathOverlayView · PathCaptureView (View)     │
-│  PathCapture · PathOverlay (Compose)          │
-│  PathSense (zero-config auto-attach)          │
-│  commonMain / androidMain / iosMain           │
+│  PathSense.init() / PathSense.configure()     │
+│  Android: PathOverlayView · PathCaptureView   │
+│  iOS: PathTrackingWindow · TouchOverlayView   │
+│  commonMain / androidMain / iosMain (Swift)   │
 └───────────────────────────────────────────────┘
 ```
 
-| Module            | Artifact                                  | Description                                                                |
-| ----------------- | ----------------------------------------- | -------------------------------------------------------------------------- |
-| `:pathsense-core` | `com.dayushmand.pathsense:pathsense-core` | Path tracking, smoothing, metrics, gesture recognition. No UI.             |
-| `:pathsense-ui`   | `com.dayushmand.pathsense:pathsense-ui`   | Rendering overlays, View/Compose adapters, zero-config `PathSense.init()`. |
+| Module            | Artifact                                  | Description                                                                                      |
+| ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `:pathsense-core` | `com.dayushmand.pathsense:pathsense-core` | Path tracking, smoothing, metrics, gesture recognition. No UI.                                   |
+| `:pathsense-ui`   | `com.dayushmand.pathsense:pathsense-ui`   | Rendering overlays, zero-config auto-attach: `PathSense.init()` (Android) / `.configure()` (iOS) |
 
 ---
 
@@ -91,82 +91,71 @@ PathSense.init(this, PathSenseConfig(
 ))
 ```
 
-### Android — Compose
+### iOS — Zero-Config (Recommended)
 
-```kotlin
-@Composable
-fun DrawScreen() {
-    val tracker = remember { PathTracker() }
+**1. Add the Swift Package**
 
-    PathCapture(
-        modifier = Modifier.fillMaxSize(),
-        tracker = tracker,
-        overlayConfig = PathOverlayConfig(showTouchCircle = true),
-        onEvent = { event -> /* handle PathEvent */ },
-    )
+Add the `PathSenseSDK` package (from `ios/PathSenseSDK`) and depend on the `PathSenseUI` product.
+
+**2. Initialize — SwiftUI**
+
+```swift
+import PathSenseUI
+
+@main
+struct MyApp: App {
+    init() {
+        PathSense.configure()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
 }
 ```
 
-Or use `PathOverlay` for rendering-only (no touch capture):
+**2. Initialize — UIKit**
 
-```kotlin
-PathOverlay(
-    modifier = Modifier.fillMaxSize(),
-    tracker = tracker,
-    overlayConfig = PathOverlayConfig(showCoordinateHUD = true),
-)
-```
+```swift
+import PathSenseUI
 
-When `PathOverlay` is used standalone (without `PathCapture`), the coordinate HUD automatically derives its text from the tracker's events — no manual wiring needed.
-
-### Android — View-Based
-
-```kotlin
-val captureView = PathCaptureView(context).apply {
-    tracker = PathTracker()
-    overlayConfig = PathOverlayConfig(showCrosshair = true)
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        PathSense.configure()
+        return true
+    }
 }
-parentLayout.addView(captureView)
 ```
 
-### iOS — Window-Level (Zero Integration)
+That's it — the SDK automatically intercepts touches on every `UIWindow`, tracks paths, recognizes gestures, and renders a gradient overlay. No view hierarchy changes needed.
+
+**3. (Optional) Customize and listen for events**
 
 ```swift
-// In SceneDelegate or App init
-let window = PathTrackingWindow(frame: UIScreen.main.bounds)
-window.overlayConfig = PathOverlayConfig()
-window.makeKeyAndVisible()
-```
-
-Intercepts all touches at the `UIWindow` level via `sendEvent(_:)` — no view hierarchy changes.
-
-### iOS — View-Level
-
-```swift
-let tracker = PathTracker()
-let captureView = PathCaptureView(tracker: tracker)
-view.addSubview(captureView)
-```
-
-### iOS — SwiftUI
-
-```swift
-PathCaptureRepresentable(
-    tracker: tracker,
-    overlayConfig: PathOverlayConfig()
-)
+var config = PathSenseConfig()
+config.overlayConfig.showCrosshair = true
+config.overlayConfig.showCoordinateHUD = true
+config.overlayConfig.style.strokeWidth = 6.0
+config.listener = { event in print("PathSense: \(event)") }
+PathSense.configure(config)
 ```
 
 ---
 
 ## Samples
 
-| Sample                    | Platform | Integration                             | Key Code                                                               |
-| ------------------------- | -------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| `samples/android-compose` | Android  | Zero-config (auto-attach)               | `PathSense.init(this, config)` in `Application.onCreate()`             |
-| `samples/android-view`    | Android  | Zero-config (auto-attach)               | `PathSense.init(this, config)` in `Application.onCreate()`             |
-| `samples/ios-swiftui`     | iOS      | View-level (`PathCaptureRepresentable`) | `PathCaptureRepresentable(tracker:overlayConfig:)` in a SwiftUI `View` |
-| `samples/ios-uikit`       | iOS      | Window-level (`PathTrackingWindow`)     | `PathTrackingWindow` replacing `UIWindow` in `SceneDelegate`           |
+| Sample                    | Platform | Integration             | Key Code                                                   |
+| ------------------------- | -------- | ----------------------- | ---------------------------------------------------------- |
+| `samples/android-compose` | Android  | Zero-config (auto-attach) | `PathSense.init(this, config)` in `Application.onCreate()` |
+| `samples/android-view`    | Android  | Zero-config (auto-attach) | `PathSense.init(this, config)` in `Application.onCreate()` |
+| `samples/ios-swiftui`     | iOS      | Zero-config (auto-attach) | `PathSense.configure(config)` in `App.init()`              |
+| `samples/ios-uikit`       | iOS      | Zero-config (auto-attach) | `PathSense.configure(config)` in `didFinishLaunchingWithOptions` |
 
 All samples show "Draw anywhere on screen" — touch and drag to see the gradient trail, touch circle, and coordinate HUD.
 

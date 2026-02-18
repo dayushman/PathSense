@@ -1,5 +1,4 @@
 import UIKit
-import PathSenseUI
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -12,16 +11,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     ) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // Use PathTrackingWindow instead of UIWindow for zero-integration gesture tracking.
-        // It intercepts all touch events and renders the path overlay automatically.
-        let window = PathTrackingWindow(frame: windowScene.coordinateSpace.bounds)
-        window.windowScene = windowScene
-
-        var config = PathOverlayConfig()
-        config.debugOnly = false
-        config.showCoordinateHUD = true
-        window.overlayConfig = config
-
+        let window = UIWindow(windowScene: windowScene)
         window.rootViewController = ViewController()
         window.makeKeyAndVisible()
         self.window = window

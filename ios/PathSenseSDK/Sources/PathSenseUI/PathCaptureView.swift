@@ -227,7 +227,8 @@ final class TouchOverlayView: UIView {
         }
         if !PathSenseUI.isEnabled { return }
         guard drawingOpacity > 0 else { return }
-        guard let points = tracker.currentPoints as? [PathPoint], points.count > 1 else { return }
+        let points = tracker.currentPoints
+        guard points.count > 1 else { return }
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
 
         ctx.setAlpha(CGFloat(drawingOpacity))
@@ -302,3 +303,4 @@ final class TouchOverlayView: UIView {
         }
     }
 }
+
