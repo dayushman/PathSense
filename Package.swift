@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "PathSenseSDK",
+    name: "PathSense",
     platforms: [
         .iOS(.v13),
     ],
