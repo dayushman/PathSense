@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
@@ -140,6 +141,10 @@ fun PathOverlay(
                 if (now.value - start > fadeOutMs) break
                 delay(16)
             }
+            // Fade finished — clear points so the path won't redraw,
+            // then reset HUD text to placeholder.
+            tracker.clearPoints()
+            effectiveHudText?.value = HUD_DEFAULT
         }
     }
 
@@ -229,11 +234,13 @@ fun PathOverlay(
                 HUDAlignment.CENTER_LEFT -> Alignment.CenterStart
                 HUDAlignment.CENTER_RIGHT -> Alignment.CenterEnd
             }
+            val hudAlpha = computeFadeAlpha(fadeStartMillis?.value, now.value, fadeOutMs)
             BasicText(
                 text = effectiveHudText?.value ?: HUD_DEFAULT,
                 modifier = Modifier
                     .align(alignment)
                     .padding(12.dp)
+                    .graphicsLayer { alpha = hudAlpha }
                     .background(
                         overlayConfig.hudBackgroundColor.toComposeColor(),
                         RoundedCornerShape(8.dp),

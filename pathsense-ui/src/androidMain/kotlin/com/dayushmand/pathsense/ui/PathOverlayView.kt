@@ -10,6 +10,8 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -42,6 +44,14 @@ class PathOverlayView @JvmOverloads constructor(
 
     private var fadeStartTime: Long? = null
     private var startPoint: PathPoint? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val resetHudRunnable = Runnable {
+        tracker?.clearPoints()
+        startPoint = null
+        fadeStartTime = null
+        hudLabel.text = HUD_DEFAULT
+        invalidate()
+    }
 
     // ---- HUD label (matches GesturePathKit's coordinateLabel) ----
     private val hudLabel: TextView = TextView(context).apply {
@@ -136,6 +146,7 @@ class PathOverlayView @JvmOverloads constructor(
 
     /** Called by the touch interceptor when a new touch starts. */
     fun notifyTouchStart(point: PathPoint) {
+        handler.removeCallbacks(resetHudRunnable)
         startPoint = point
         fadeStartTime = null
         updateHudText(point)
@@ -151,25 +162,36 @@ class PathOverlayView @JvmOverloads constructor(
     /** Called by the touch interceptor when the touch ends. */
     fun notifyTouchEnd(point: PathPoint) {
         updateHudText(point)
-        if (overlayConfig.style.fadeOutMs > 0) {
+        val fadeMs = overlayConfig.style.fadeOutMs
+        if (fadeMs > 0) {
             fadeStartTime = SystemClock.uptimeMillis()
+            // Schedule HUD text reset after the fade duration
+            handler.removeCallbacks(resetHudRunnable)
+            handler.postDelayed(resetHudRunnable, fadeMs)
             invalidate()
         }
     }
 
     /** Called by the touch interceptor on cancel. */
     fun notifyTouchCancel() {
+        handler.removeCallbacks(resetHudRunnable)
         startPoint = null
         hudLabel.text = HUD_DEFAULT
         invalidate()
     }
 
     fun clearCanvas() {
+        handler.removeCallbacks(resetHudRunnable)
         tracker?.clearPoints()
         fadeStartTime = null
         startPoint = null
         hudLabel.text = HUD_DEFAULT
         invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        handler.removeCallbacks(resetHudRunnable)
     }
 
     private fun updateHudText(current: PathPoint) {
@@ -185,9 +207,19 @@ class PathOverlayView @JvmOverloads constructor(
         if (!isDebugBuild() && overlayConfig.debugOnly) return
 
         val points = tracker?.currentPoints.orEmpty()
-        if (points.isEmpty()) return
+        if (points.isEmpty()) {
+            // No points — ensure HUD label is fully opaque (reset state)
+            hudLabel.alpha = 1f
+            return
+        }
 
         val fadeAlpha = computeFadeAlpha()
+
+        // Sync HUD label opacity with the canvas fade
+        if (overlayConfig.showCoordinateHUD) {
+            hudLabel.alpha = fadeAlpha
+        }
+
         if (fadeAlpha <= 0f) return
 
         val style = overlayConfig.style
