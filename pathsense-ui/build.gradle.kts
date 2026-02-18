@@ -70,20 +70,28 @@ android {
     buildFeatures {
         compose = true
     }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["kotlin"])
+afterEvaluate {
+    publishing {
+        publications.withType<MavenPublication> {
             groupId = project.group.toString()
-            artifactId = "pathsense-ui"
             version = project.version.toString()
+
+            pom {
+                name.set("PathSense UI")
+                description.set("UI components for PathSense gesture recognition SDK")
+            }
         }
     }
 }
 
 signing {
-    // Configure signing credentials in your Gradle user home or CI secrets.
+    isRequired = findProperty("signing.keyId") != null
     sign(publishing.publications)
 }
