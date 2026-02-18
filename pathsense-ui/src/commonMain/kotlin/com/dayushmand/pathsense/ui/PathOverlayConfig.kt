@@ -5,7 +5,7 @@ data class PathOverlayConfig(
     val style: PathStyle = PathStyle(),
     val showCrosshair: Boolean = true,
     val showTouchCircle: Boolean = true,
-    val showCoordinateHUD: Boolean = false,
+    val showCoordinateHUD: Boolean = true,
     val hudAlignment: HUDAlignment = HUDAlignment.TOP_LEFT,
     val hudTextColor: Long = 0xFFFFFFFF,
     val hudBackgroundColor: Long = 0xB3000000,
