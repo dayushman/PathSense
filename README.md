@@ -181,3 +181,6 @@ PathSense.configure(config)
 ## License
 
 TBD
+
+## Releases
+[![](https://jitpack.io/v/dayushman/PathSense.svg)](https://jitpack.io/#dayushman/PathSense)
