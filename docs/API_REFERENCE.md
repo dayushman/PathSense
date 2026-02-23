@@ -2,6 +2,8 @@
 
 ## Core Models
 
+> All configuration types below (`PathConfig`, `PathOverlayConfig`, `PathStyle`, `HUDAlignment`, `StrokeCap`) are defined in the **`pathsense-core`** module. On Android they are consumed via Gradle; on iOS they are exported through the `PathSenseCore.xcframework` and accessible via `import PathSenseCore`.
+
 | Type                                   | Description                                                                                                     |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `PathPoint(x, y, tMillis)`             | A timestamped touch coordinate                                                                                  |
@@ -77,7 +79,7 @@ tracker.addRecognizer(customRecognizer)
 | `hudTextColor`       | `0xFFFFFFFF` (white)     | Coordinate HUD text color (ARGB)                                                                    |
 | `hudBackgroundColor` | `0xB3000000` (70% black) | Coordinate HUD background color (ARGB)                                                              |
 
-> **Note:** All color values use standard ARGB hex format (e.g. `0xFFFF3B30`). The SDK handles conversion for both View and Compose renderers.
+> **Note:** All color values use standard ARGB hex format (e.g. `0xFFFF3B30`). On Android, the SDK handles conversion for both View and Compose renderers. On iOS, the Swift `PathSenseUI` package provides UIKit convenience extensions (e.g. `.gradientStartUIColor`, `.hudUITextColor`, `.boundingBoxUIColor`) for converting to `UIColor`.
 >
 > The coordinate HUD automatically respects system bar insets (status bar, navigation bar) on edge-to-edge configurations — no extra layout work required.
 
@@ -110,10 +112,17 @@ PathSenseConfig(
 ## PathSenseConfig (iOS)
 
 ```swift
+import PathSenseUI   // @_exported imports PathSenseCore transitively
+
 var config = PathSenseConfig()
-config.overlayConfig = PathOverlayConfig()
+config.overlayConfig = PathOverlayConfig()   // Kotlin-exported type
+config.overlayConfig.style.strokeWidthPx = 6.0
 config.listener = { event in /* ... */ }
 ```
+
+> **iOS UIKit helpers:** The `PathSenseUI` Swift module adds convenience extensions on the Kotlin types:
+> - `PathStyle.gradientStartUIColor` / `.gradientEndUIColor` / `.strokeWidth` (CGFloat) / `.strokeLineCap` (CGLineCap) / `.boundingBoxUIColor`
+> - `PathOverlayConfig.hudUITextColor` / `.hudUIBackgroundColor`
 
 ---
 

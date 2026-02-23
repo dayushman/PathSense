@@ -1,35 +1,53 @@
+@_exported import PathSenseCore
 import UIKit
 
-public struct PathStyle {
-    public var gradientStartColor: UIColor = UIColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 1.0)
-    public var gradientEndColor: UIColor = UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)
-    public var strokeWidth: CGFloat = 4.0
-    public var strokeCap: CGLineCap = .round
-    public var fadeOutMs: Int = 300
-    public var showBoundingBox: Bool = false
-    public var boundingBoxColor: UIColor = UIColor(red: 0.0, green: 1.0, blue: 0.0, alpha: 0.27)
+// Types PathOverlayConfig, PathStyle, HUDAlignment, and StrokeCap are now
+// defined in the shared Kotlin module (pathsense-core) and exported through
+// PathSenseCore.xcframework. No manual re-declaration is needed here.
+//
+// This file provides UIKit convenience extensions so that the rest of the
+// Swift UI layer can work with UIColor / CGLineCap / CGFloat seamlessly.
 
-    public init() {}
+// MARK: - UIColor ← Long ARGB
+
+extension UIColor {
+    /// Creates a UIColor from an ARGB `Int64` matching the Kotlin `Long` colour format.
+    convenience init(argb value: Int64) {
+        let a = CGFloat((value >> 24) & 0xFF) / 255.0
+        let r = CGFloat((value >> 16) & 0xFF) / 255.0
+        let g = CGFloat((value >> 8) & 0xFF) / 255.0
+        let b = CGFloat(value & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b, alpha: a)
+    }
 }
 
-public enum HUDAlignment {
-    case topLeft
-    case topRight
-    case bottomLeft
-    case bottomRight
-    case centerLeft
-    case centerRight
+// MARK: - PathStyle UIKit helpers
+
+extension PathStyle {
+    /// Gradient start colour as `UIColor`.
+    public var gradientStartUIColor: UIColor { UIColor(argb: gradientStartColor) }
+    /// Gradient end colour as `UIColor`.
+    public var gradientEndUIColor: UIColor { UIColor(argb: gradientEndColor) }
+    /// Stroke width as `CGFloat`.
+    public var strokeWidth: CGFloat { CGFloat(strokeWidthPx) }
+    /// Stroke cap mapped to Core Graphics.
+    public var strokeLineCap: CGLineCap {
+        switch strokeCap {
+        case .butt: return .butt
+        case .round: return .round
+        case .square: return .square
+        default: return .round
+        }
+    }
+    /// Bounding box colour as `UIColor`.
+    public var boundingBoxUIColor: UIColor { UIColor(argb: boundingBoxColor) }
 }
 
-public struct PathOverlayConfig {
-    public var debugOnly: Bool = true
-    public var style: PathStyle = PathStyle()
-    public var showCrosshair: Bool = false
-    public var showTouchCircle: Bool = true
-    public var showCoordinateHUD: Bool = false
-    public var hudAlignment: HUDAlignment = .topLeft
-    public var hudTextColor: UIColor = .white
-    public var hudBackgroundColor: UIColor = UIColor.black.withAlphaComponent(0.7)
+// MARK: - PathOverlayConfig UIKit helpers
 
-    public init() {}
+extension PathOverlayConfig {
+    /// HUD text colour as `UIColor`.
+    public var hudUITextColor: UIColor { UIColor(argb: hudTextColor) }
+    /// HUD background colour as `UIColor`.
+    public var hudUIBackgroundColor: UIColor { UIColor(argb: hudBackgroundColor) }
 }

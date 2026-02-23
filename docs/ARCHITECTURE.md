@@ -7,6 +7,7 @@
 │                 pathsense-core                │   ← Headless, no UI deps
 │  PathTracker · PathEvent · PathMetrics        │
 │  PointBuffer · Resampler · $1 Recognizer      │
+│  PathOverlayConfig · PathStyle · HUDAlignment  │   ← Shared config types
 │  commonMain / androidMain / iosMain           │
 └───────────────────┬───────────────────────────┘
                     │ depends on
@@ -15,13 +16,13 @@
 │  PathSense.init() / PathSense.configure()     │
 │  Android: PathOverlayView · PathCaptureView   │
 │  iOS: PathTrackingWindow · TouchOverlayView   │
-│  commonMain / androidMain / iosMain (Swift)   │
+│  androidMain / iosMain (Swift)                │
 └───────────────────────────────────────────────┘
 ```
 
 | Module            | Artifact                                  | Description                                                                                      |
 | ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `:pathsense-core` | `com.dayushmand.pathsense:pathsense-core` | Path tracking, smoothing, metrics, gesture recognition. No UI.                                   |
+| `:pathsense-core` | `com.dayushmand.pathsense:pathsense-core` | Path tracking, smoothing, metrics, gesture recognition, **shared config types**. No UI.          |
 | `:pathsense-ui`   | `com.dayushmand.pathsense:pathsense-ui`   | Rendering overlays, zero-config auto-attach: `PathSense.init()` (Android) / `.configure()` (iOS) |
 
 ---
@@ -86,6 +87,7 @@ Built-in templates: **Line**, **Circle**, **Rectangle**, **Zigzag**.
 
 ## Key Design Decisions
 
+- **Shared config types in core**: `PathOverlayConfig`, `PathStyle`, `HUDAlignment`, and `StrokeCap` are defined in `pathsense-core`, ensuring a single source of truth across Android and iOS. Colors use ARGB `Long` values; the iOS Swift layer provides UIKit convenience extensions for `UIColor` conversion.
 - **Headless-first**: `PathTracker` has zero UI dependencies — usable in services, tests, or background processing without any View.
 - **Memory bounded**: Point buffer capped at `maxPoints` (default 500) via FIFO ring buffer; long gestures never cause unbounded memory growth.
 - **Zero touch-to-pixel latency**: Smoothing runs inline on the main thread; the renderer reads smoothed points directly. All heavy computation (resampling, metrics, recognition) runs on `Dispatchers.Default` and never blocks rendering.
@@ -100,15 +102,14 @@ Built-in templates: **Line**, **Circle**, **Rectangle**, **Zigzag**.
 PathSenseSDK/
 ├── pathsense-core/                    # Headless KMM core
 │   └── src/
-│       ├── commonMain/                # Models, PathTracker, Resampler, $1 Recognizer
+│       ├── commonMain/                # Models, PathTracker, Resampler, $1 Recognizer,
+│       │                              # PathOverlayConfig, PathStyle, HUDAlignment, StrokeCap
 │       ├── androidMain/               # Android dispatcher + time utils
 │       ├── iosMain/                   # iOS dispatcher + time utils
 │       └── commonTest/                # Unit tests
 ├── pathsense-ui/                      # Opt-in rendering module
 │   └── src/
-│       ├── commonMain/                # PathOverlayConfig, PathStyle, HUDAlignment
 │       ├── androidMain/               # PathOverlayView, PathCaptureView, Compose, PathSense
-│       ├── iosMain/                   # (iOS rendering via Swift sources)
 │       ├── commonTest/                # Common UI tests
 │       └── androidTest/               # Android instrumentation tests
 ├── samples/
@@ -119,8 +120,8 @@ PathSenseSDK/
 ├── ios/PathSenseSDK/                  # Swift Package
 │   ├── Package.swift
 │   ├── Sources/
-│   │   ├── PathSenseCore/             # XCFramework wrapper
-│   │   └── PathSenseUI/               # Swift UIKit/SwiftUI adapters
+│   │   ├── PathSenseCore/             # XCFramework wrapper (Kotlin-compiled binary)
+│   │   └── PathSenseUI/               # Swift UIKit/SwiftUI adapters + UIKit extensions
 │   └── Tests/
 └── build.gradle.kts                   # Root build config
 ```

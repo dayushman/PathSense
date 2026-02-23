@@ -6,7 +6,7 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
 
-@class PSCGestureType, PSCGestureMatch, PSCPathPoint, PSCKotlinEnumCompanion, PSCKotlinEnum<E>, PSCKotlinArray<T>, PSCPathConfig, PSCPathEvent, PSCPathEventCancelled, PSCPathEventEnded, PSCPathEventGestureRecognized, PSCPathMetrics, PSCPathEventMetricsEnded, PSCPathEventMetricsUpdated, PSCPathEventStarted, PSCPathEventUpdated, PSCRectF;
+@class PSCGestureType, PSCGestureMatch, PSCPathPoint, PSCKotlinEnumCompanion, PSCKotlinEnum<E>, PSCKotlinArray<T>, PSCHUDAlignment, PSCPathConfig, PSCPathEvent, PSCPathEventCancelled, PSCPathEventEnded, PSCPathEventGestureRecognized, PSCPathMetrics, PSCPathEventMetricsEnded, PSCPathEventMetricsUpdated, PSCPathEventStarted, PSCPathEventUpdated, PSCRectF, PSCPathStyle, PSCPathOverlayConfig, PSCStrokeCap;
 
 @protocol PSCKotlinComparable, PSCGestureRecognizer, PSCKotlinIterator;
 
@@ -197,6 +197,22 @@ __attribute__((swift_name("GestureType")))
 @end
 
 __attribute__((objc_subclassing_restricted))
+__attribute__((swift_name("HUDAlignment")))
+@interface PSCHUDAlignment : PSCKotlinEnum<PSCHUDAlignment *>
++ (instancetype)alloc __attribute__((unavailable));
++ (instancetype)allocWithZone:(struct _NSZone *)zone __attribute__((unavailable));
+- (instancetype)initWithName:(NSString *)name ordinal:(int32_t)ordinal __attribute__((swift_name("init(name:ordinal:)"))) __attribute__((objc_designated_initializer)) __attribute__((unavailable));
+@property (class, readonly) PSCHUDAlignment *topLeft __attribute__((swift_name("topLeft")));
+@property (class, readonly) PSCHUDAlignment *topRight __attribute__((swift_name("topRight")));
+@property (class, readonly) PSCHUDAlignment *bottomLeft __attribute__((swift_name("bottomLeft")));
+@property (class, readonly) PSCHUDAlignment *bottomRight __attribute__((swift_name("bottomRight")));
+@property (class, readonly) PSCHUDAlignment *centerLeft __attribute__((swift_name("centerLeft")));
+@property (class, readonly) PSCHUDAlignment *centerRight __attribute__((swift_name("centerRight")));
++ (PSCKotlinArray<PSCHUDAlignment *> *)values __attribute__((swift_name("values()")));
+@property (class, readonly) NSArray<PSCHUDAlignment *> *entries __attribute__((swift_name("entries")));
+@end
+
+__attribute__((objc_subclassing_restricted))
 __attribute__((swift_name("PathConfig")))
 @interface PSCPathConfig : PSCBase
 - (instancetype)initWithSamplingHz:(int32_t)samplingHz minDistancePx:(float)minDistancePx smoothingWindow:(int32_t)smoothingWindow resampleSpacingPx:(float)resampleSpacingPx maxPoints:(int32_t)maxPoints __attribute__((swift_name("init(samplingHz:minDistancePx:smoothingWindow:resampleSpacingPx:maxPoints:)"))) __attribute__((objc_designated_initializer));
@@ -317,6 +333,26 @@ __attribute__((swift_name("PathMetrics")))
 @end
 
 __attribute__((objc_subclassing_restricted))
+__attribute__((swift_name("PathOverlayConfig")))
+@interface PSCPathOverlayConfig : PSCBase
+- (instancetype)init __attribute__((swift_name("init()"))) __attribute__((objc_designated_initializer));
++ (instancetype)new __attribute__((availability(swift, unavailable, message="use object initializers instead")));
+- (instancetype)initWithDebugOnly:(BOOL)debugOnly style:(PSCPathStyle *)style showCrosshair:(BOOL)showCrosshair showTouchCircle:(BOOL)showTouchCircle showCoordinateHUD:(BOOL)showCoordinateHUD hudAlignment:(PSCHUDAlignment *)hudAlignment hudTextColor:(int64_t)hudTextColor hudBackgroundColor:(int64_t)hudBackgroundColor __attribute__((swift_name("init(debugOnly:style:showCrosshair:showTouchCircle:showCoordinateHUD:hudAlignment:hudTextColor:hudBackgroundColor:)"))) __attribute__((objc_designated_initializer));
+- (PSCPathOverlayConfig *)doCopyDebugOnly:(BOOL)debugOnly style:(PSCPathStyle *)style showCrosshair:(BOOL)showCrosshair showTouchCircle:(BOOL)showTouchCircle showCoordinateHUD:(BOOL)showCoordinateHUD hudAlignment:(PSCHUDAlignment *)hudAlignment hudTextColor:(int64_t)hudTextColor hudBackgroundColor:(int64_t)hudBackgroundColor __attribute__((swift_name("doCopy(debugOnly:style:showCrosshair:showTouchCircle:showCoordinateHUD:hudAlignment:hudTextColor:hudBackgroundColor:)")));
+- (BOOL)isEqual:(id _Nullable)other __attribute__((swift_name("isEqual(_:)")));
+- (NSUInteger)hash __attribute__((swift_name("hash()")));
+- (NSString *)description __attribute__((swift_name("description()")));
+@property BOOL debugOnly __attribute__((swift_name("debugOnly")));
+@property PSCHUDAlignment *hudAlignment __attribute__((swift_name("hudAlignment")));
+@property int64_t hudBackgroundColor __attribute__((swift_name("hudBackgroundColor")));
+@property int64_t hudTextColor __attribute__((swift_name("hudTextColor")));
+@property BOOL showCoordinateHUD __attribute__((swift_name("showCoordinateHUD")));
+@property BOOL showCrosshair __attribute__((swift_name("showCrosshair")));
+@property BOOL showTouchCircle __attribute__((swift_name("showTouchCircle")));
+@property PSCPathStyle *style __attribute__((swift_name("style")));
+@end
+
+__attribute__((objc_subclassing_restricted))
 __attribute__((swift_name("PathPoint")))
 @interface PSCPathPoint : PSCBase
 - (instancetype)initWithX:(float)x y:(float)y tMillis:(int64_t)tMillis __attribute__((swift_name("init(x:y:tMillis:)"))) __attribute__((objc_designated_initializer));
@@ -327,6 +363,25 @@ __attribute__((swift_name("PathPoint")))
 @property (readonly) int64_t tMillis __attribute__((swift_name("tMillis")));
 @property (readonly) float x __attribute__((swift_name("x")));
 @property (readonly) float y __attribute__((swift_name("y")));
+@end
+
+__attribute__((objc_subclassing_restricted))
+__attribute__((swift_name("PathStyle")))
+@interface PSCPathStyle : PSCBase
+- (instancetype)init __attribute__((swift_name("init()"))) __attribute__((objc_designated_initializer));
++ (instancetype)new __attribute__((availability(swift, unavailable, message="use object initializers instead")));
+- (instancetype)initWithGradientStartColor:(int64_t)gradientStartColor gradientEndColor:(int64_t)gradientEndColor strokeWidthPx:(float)strokeWidthPx strokeCap:(PSCStrokeCap *)strokeCap fadeOutMs:(int64_t)fadeOutMs showBoundingBox:(BOOL)showBoundingBox boundingBoxColor:(int64_t)boundingBoxColor __attribute__((swift_name("init(gradientStartColor:gradientEndColor:strokeWidthPx:strokeCap:fadeOutMs:showBoundingBox:boundingBoxColor:)"))) __attribute__((objc_designated_initializer));
+- (PSCPathStyle *)doCopyGradientStartColor:(int64_t)gradientStartColor gradientEndColor:(int64_t)gradientEndColor strokeWidthPx:(float)strokeWidthPx strokeCap:(PSCStrokeCap *)strokeCap fadeOutMs:(int64_t)fadeOutMs showBoundingBox:(BOOL)showBoundingBox boundingBoxColor:(int64_t)boundingBoxColor __attribute__((swift_name("doCopy(gradientStartColor:gradientEndColor:strokeWidthPx:strokeCap:fadeOutMs:showBoundingBox:boundingBoxColor:)")));
+- (BOOL)isEqual:(id _Nullable)other __attribute__((swift_name("isEqual(_:)")));
+- (NSUInteger)hash __attribute__((swift_name("hash()")));
+- (NSString *)description __attribute__((swift_name("description()")));
+@property int64_t boundingBoxColor __attribute__((swift_name("boundingBoxColor")));
+@property int64_t fadeOutMs __attribute__((swift_name("fadeOutMs")));
+@property int64_t gradientEndColor __attribute__((swift_name("gradientEndColor")));
+@property int64_t gradientStartColor __attribute__((swift_name("gradientStartColor")));
+@property BOOL showBoundingBox __attribute__((swift_name("showBoundingBox")));
+@property PSCStrokeCap *strokeCap __attribute__((swift_name("strokeCap")));
+@property float strokeWidthPx __attribute__((swift_name("strokeWidthPx")));
 @end
 
 __attribute__((objc_subclassing_restricted))
@@ -358,6 +413,19 @@ __attribute__((swift_name("RectF")))
 @property (readonly) float left __attribute__((swift_name("left")));
 @property (readonly) float right __attribute__((swift_name("right")));
 @property (readonly) float top __attribute__((swift_name("top")));
+@end
+
+__attribute__((objc_subclassing_restricted))
+__attribute__((swift_name("StrokeCap")))
+@interface PSCStrokeCap : PSCKotlinEnum<PSCStrokeCap *>
++ (instancetype)alloc __attribute__((unavailable));
++ (instancetype)allocWithZone:(struct _NSZone *)zone __attribute__((unavailable));
+- (instancetype)initWithName:(NSString *)name ordinal:(int32_t)ordinal __attribute__((swift_name("init(name:ordinal:)"))) __attribute__((objc_designated_initializer)) __attribute__((unavailable));
+@property (class, readonly) PSCStrokeCap *butt __attribute__((swift_name("butt")));
+@property (class, readonly) PSCStrokeCap *round __attribute__((swift_name("round")));
+@property (class, readonly) PSCStrokeCap *square __attribute__((swift_name("square")));
++ (PSCKotlinArray<PSCStrokeCap *> *)values __attribute__((swift_name("values()")));
+@property (class, readonly) NSArray<PSCStrokeCap *> *entries __attribute__((swift_name("entries")));
 @end
 
 __attribute__((objc_subclassing_restricted))

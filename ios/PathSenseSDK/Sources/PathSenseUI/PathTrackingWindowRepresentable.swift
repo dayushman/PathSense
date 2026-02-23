@@ -1,3 +1,4 @@
+import PathSenseCore
 import SwiftUI
 
 public struct PathTrackingWindowRepresentable: UIViewRepresentable {
@@ -13,7 +14,9 @@ public struct PathTrackingWindowRepresentable: UIViewRepresentable {
 
     public func updateUIView(_ uiView: UIView, context: Context) {
         guard let scene = uiView.window?.windowScene else { return }
-        if let window = scene.windows.first(where: { $0 is PathTrackingWindow }) as? PathTrackingWindow {
+        if let window = scene.windows.first(where: { $0 is PathTrackingWindow })
+            as? PathTrackingWindow
+        {
             window.overlayConfig = overlayConfig
         }
     }

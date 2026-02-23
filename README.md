@@ -2,6 +2,8 @@
 
 A **Kotlin Multiplatform** gesture SDK for **Android** (View + Compose) and **iOS** (UIKit + SwiftUI). One-line setup — touch-path capture, real-time smoothing, metrics, gesture recognition, and visual overlays out of the box.
 
+All configuration types (`PathOverlayConfig`, `PathStyle`, `HUDAlignment`, `StrokeCap`) are defined once in `pathsense-core` and shared across both platforms — Android uses them directly via Gradle, iOS consumes them through the `PathSenseCore.xcframework`.
+
 ---
 
 ## Features
@@ -140,10 +142,12 @@ Done. The SDK intercepts touches on every `UIWindow`, tracks paths, recognizes g
 var config = PathSenseConfig()
 config.overlayConfig.showCrosshair = true
 config.overlayConfig.showCoordinateHUD = true
-config.overlayConfig.style.strokeWidth = 6.0
+config.overlayConfig.style.strokeWidthPx = 6.0
 config.listener = { event in print("PathSense: \(event)") }
 PathSense.configure(config)
 ```
+
+> **Note:** On iOS, colour properties (e.g. `gradientStartColor`, `hudTextColor`) are `Int64` ARGB values from the shared Kotlin module. The `PathSenseUI` Swift package provides UIKit convenience extensions like `.gradientStartUIColor`, `.hudUITextColor` etc. for converting to `UIColor` when needed.
 
 ---
 
