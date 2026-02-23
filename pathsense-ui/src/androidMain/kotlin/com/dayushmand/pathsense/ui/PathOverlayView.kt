@@ -20,8 +20,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import com.dayushmand.pathsense.core.HUDAlignment
+import com.dayushmand.pathsense.core.PathOverlayConfig
 import com.dayushmand.pathsense.core.PathPoint
+import com.dayushmand.pathsense.core.PathStyle
 import com.dayushmand.pathsense.core.PathTracker
+import com.dayushmand.pathsense.core.StrokeCap
 import kotlin.math.max
 
 class PathOverlayView @JvmOverloads constructor(

@@ -27,8 +27,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dayushmand.pathsense.core.HUDAlignment
+import com.dayushmand.pathsense.core.PathOverlayConfig
 import com.dayushmand.pathsense.core.PathPoint
+import com.dayushmand.pathsense.core.PathStyle
 import com.dayushmand.pathsense.core.PathTracker
+import com.dayushmand.pathsense.core.StrokeCap
 import kotlinx.coroutines.delay
 import kotlin.math.max
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.widget.FrameLayout
+import com.dayushmand.pathsense.core.PathOverlayConfig
 import com.dayushmand.pathsense.core.PathPoint
 import com.dayushmand.pathsense.core.PathTracker
 

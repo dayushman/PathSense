@@ -1,5 +1,5 @@
-import UIKit
 import PathSenseCore
+import UIKit
 
 public final class PathCaptureView: UIView {
     public let tracker: PathTracker
@@ -36,21 +36,30 @@ public final class PathCaptureView: UIView {
     public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
-        tracker.onDown(p: PathPoint(x: Float(point.x), y: Float(point.y), tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
+        tracker.onDown(
+            p: PathPoint(
+                x: Float(point.x), y: Float(point.y),
+                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
         overlayView.notifyTouchStart(at: point)
     }
 
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
-        tracker.onMove(p: PathPoint(x: Float(point.x), y: Float(point.y), tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
+        tracker.onMove(
+            p: PathPoint(
+                x: Float(point.x), y: Float(point.y),
+                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
         overlayView.notifyTouchMove(to: point)
     }
 
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
-        tracker.onUp(p: PathPoint(x: Float(point.x), y: Float(point.y), tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
+        tracker.onUp(
+            p: PathPoint(
+                x: Float(point.x), y: Float(point.y),
+                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
         overlayView.notifyTouchEnd(at: point)
     }
 
@@ -106,8 +115,8 @@ final class TouchOverlayView: UIView {
     }
 
     private func applyHudConfig() {
-        hudLabel.textColor = overlayConfig.hudTextColor
-        hudLabel.backgroundColor = overlayConfig.hudBackgroundColor
+        hudLabel.textColor = overlayConfig.hudUITextColor
+        hudLabel.backgroundColor = overlayConfig.hudUIBackgroundColor
         hudLabel.isHidden = !overlayConfig.showCoordinateHUD
         setNeedsLayout()
     }
@@ -128,19 +137,25 @@ final class TouchOverlayView: UIView {
         let safeRight = safeAreaInsets.right
 
         let origin: CGPoint
-        switch overlayConfig.hudAlignment {
-        case .topLeft:
+        let alignment = overlayConfig.hudAlignment
+        if alignment == .topLeft {
             origin = CGPoint(x: hudPadding + safeLeft, y: hudPadding + safeTop)
-        case .topRight:
-            origin = CGPoint(x: bounds.width - labelWidth - hudPadding - safeRight, y: hudPadding + safeTop)
-        case .bottomLeft:
-            origin = CGPoint(x: hudPadding + safeLeft, y: bounds.height - labelHeight - hudPadding - safeBottom)
-        case .bottomRight:
-            origin = CGPoint(x: bounds.width - labelWidth - hudPadding - safeRight, y: bounds.height - labelHeight - hudPadding - safeBottom)
-        case .centerLeft:
+        } else if alignment == .topRight {
+            origin = CGPoint(
+                x: bounds.width - labelWidth - hudPadding - safeRight, y: hudPadding + safeTop)
+        } else if alignment == .bottomLeft {
+            origin = CGPoint(
+                x: hudPadding + safeLeft, y: bounds.height - labelHeight - hudPadding - safeBottom)
+        } else if alignment == .bottomRight {
+            origin = CGPoint(
+                x: bounds.width - labelWidth - hudPadding - safeRight,
+                y: bounds.height - labelHeight - hudPadding - safeBottom)
+        } else if alignment == .centerLeft {
             origin = CGPoint(x: hudPadding + safeLeft, y: (bounds.height - labelHeight) / 2)
-        case .centerRight:
-            origin = CGPoint(x: bounds.width - labelWidth - hudPadding - safeRight, y: (bounds.height - labelHeight) / 2)
+        } else {  // .centerRight
+            origin = CGPoint(
+                x: bounds.width - labelWidth - hudPadding - safeRight,
+                y: (bounds.height - labelHeight) / 2)
         }
         hudLabel.frame.origin = origin
     }
@@ -196,7 +211,7 @@ final class TouchOverlayView: UIView {
             return
         }
         let elapsed = Date().timeIntervalSince(fadeStart)
-        let duration = TimeInterval(overlayConfig.style.fadeOutMs) / 1000.0
+        let duration = TimeInterval(overlayConfig.style.fadeOutMs) / 1000.0  // fadeOutMs is Int64 from Kotlin
         let t = min(Float(elapsed / duration), 1.0)
         drawingOpacity = 1.0 - t
         setNeedsDisplay()
@@ -222,7 +237,7 @@ final class TouchOverlayView: UIView {
     override func draw(_ rect: CGRect) {
         if overlayConfig.debugOnly {
             #if !DEBUG
-            return
+                return
             #endif
         }
         if !PathSenseUI.isEnabled { return }
@@ -239,8 +254,10 @@ final class TouchOverlayView: UIView {
         for i in 1..<points.count {
             let prev = points[i - 1]
             let curr = points[i]
-            let mid = CGPoint(x: CGFloat((prev.x + curr.x) / 2.0), y: CGFloat((prev.y + curr.y) / 2.0))
-            path.addQuadCurve(to: mid, controlPoint: CGPoint(x: CGFloat(prev.x), y: CGFloat(prev.y)))
+            let mid = CGPoint(
+                x: CGFloat((prev.x + curr.x) / 2.0), y: CGFloat((prev.y + curr.y) / 2.0))
+            path.addQuadCurve(
+                to: mid, controlPoint: CGPoint(x: CGFloat(prev.x), y: CGFloat(prev.y)))
         }
         if let last = points.last {
             path.addLine(to: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y)))
@@ -249,16 +266,23 @@ final class TouchOverlayView: UIView {
         ctx.saveGState()
         ctx.addPath(path.cgPath)
         ctx.setLineWidth(overlayConfig.style.strokeWidth)
-        ctx.setLineCap(overlayConfig.style.strokeCap)
+        ctx.setLineCap(overlayConfig.style.strokeLineCap)
         ctx.replacePathWithStrokedPath()
         ctx.clip()
 
-        let colors = [overlayConfig.style.gradientStartColor.cgColor, overlayConfig.style.gradientEndColor.cgColor] as CFArray
-        let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])
+        let colors =
+            [
+                overlayConfig.style.gradientStartUIColor.cgColor,
+                overlayConfig.style.gradientEndUIColor.cgColor,
+            ] as CFArray
+        let gradient = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])
         let start = CGPoint(x: CGFloat(points.first?.x ?? 0), y: CGFloat(points.first?.y ?? 0))
         let end = CGPoint(x: CGFloat(points.last?.x ?? 0), y: CGFloat(points.last?.y ?? 0))
         if let gradient = gradient {
-            ctx.drawLinearGradient(gradient, start: start, end: end, options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            ctx.drawLinearGradient(
+                gradient, start: start, end: end,
+                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
         }
         ctx.restoreGState()
 
@@ -269,7 +293,7 @@ final class TouchOverlayView: UIView {
             crosshairPath.addLine(to: CGPoint(x: bounds.width, y: CGFloat(last.y)))
             crosshairPath.move(to: CGPoint(x: CGFloat(last.x), y: 0))
             crosshairPath.addLine(to: CGPoint(x: CGFloat(last.x), y: bounds.height))
-            overlayConfig.style.gradientEndColor.withAlphaComponent(0.63).setStroke()
+            overlayConfig.style.gradientEndUIColor.withAlphaComponent(0.63).setStroke()
             crosshairPath.lineWidth = 2.0
             crosshairPath.stroke()
         }
@@ -277,8 +301,11 @@ final class TouchOverlayView: UIView {
         // --- Touch circle (3pt stroke, ~78% alpha, matching Android) ---
         if overlayConfig.showTouchCircle, let last = points.last {
             let radius = max(16.0, overlayConfig.style.strokeWidth * 3.0)
-            let circle = UIBezierPath(ovalIn: CGRect(x: CGFloat(last.x) - radius, y: CGFloat(last.y) - radius, width: radius * 2, height: radius * 2))
-            overlayConfig.style.gradientStartColor.withAlphaComponent(0.78).setStroke()
+            let circle = UIBezierPath(
+                ovalIn: CGRect(
+                    x: CGFloat(last.x) - radius, y: CGFloat(last.y) - radius, width: radius * 2,
+                    height: radius * 2))
+            overlayConfig.style.gradientStartUIColor.withAlphaComponent(0.78).setStroke()
             circle.lineWidth = 3.0
             circle.stroke()
         }
@@ -297,10 +324,9 @@ final class TouchOverlayView: UIView {
             }
             let boxRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
             let boxPath = UIBezierPath(rect: boxRect)
-            overlayConfig.style.boundingBoxColor.setStroke()
+            overlayConfig.style.boundingBoxUIColor.setStroke()
             boxPath.lineWidth = max(2.0, overlayConfig.style.strokeWidth / 2.0)
             boxPath.stroke()
         }
     }
 }
-

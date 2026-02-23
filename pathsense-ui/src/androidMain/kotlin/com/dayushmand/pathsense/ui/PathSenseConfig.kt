@@ -2,6 +2,7 @@ package com.dayushmand.pathsense.ui
 
 import com.dayushmand.pathsense.core.PathConfig
 import com.dayushmand.pathsense.core.PathEvent
+import com.dayushmand.pathsense.core.PathOverlayConfig
 
 /**
  * Configuration for [PathSense] auto-initialization.
