@@ -26,6 +26,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
 - `GestureRecognizer` interface
   - `fun recognize(points: List<PathPoint>): GestureMatch?`
 - `PathTracker(config: PathConfig)` — **headless, no UI dependency**
+  - `var captureEnabled: Boolean` — enable/disable touch processing; auto-cancels mid-gesture session when set to `false`
   - `fun onDown(p: PathPoint)`
   - `fun onMove(p: PathPoint)`
   - `fun onUp(p: PathPoint)`
@@ -51,6 +52,8 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
 - `HUDAlignment`: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, `CENTER_LEFT`, `CENTER_RIGHT`
 - Coordinate HUD displays: live `(x, y)` position and `(dx, dy)` delta from last point
 - `fun clearCanvas()` — programmatically clear all rendered paths and overlays
+- `PathSense.disable()` / `PathSense.enable()` / `PathSense.isEnabled` (Android) — globally disable/enable path capture; `disable()` clears overlays immediately
+- `PathSense.disable()` / `PathSense.enable()` / `PathSense.isEnabled` (iOS) — globally disable/enable path capture; `disable()` clears overlays immediately
 
 ## Architecture / Modules
 
@@ -122,6 +125,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
 - **Zero touch-to-pixel latency**: the renderer reads smoothed points directly from the main-thread buffer — no waiting for background work. Resampling, metrics, and recognition never block drawing.
 - **Recognition algorithm**: built-in recognizers use the **$1 Unistroke Recognizer** (resampling to 64 points, rotating to indicative angle, scaling to unit square, matching against templates via cosine distance). `GestureMatch.score` = 1 − (distance / half-diagonal of unit square), range 0.0–1.0. Default threshold: 0.75.
 - Non-intrusive: overlay views are transparent to touch events (`isUserInteractionEnabled = false` / `clickable = false`); app functions normally.
+- **Runtime enable/disable**: `PathSense.disable()` pauses all touch tracking, cancels in-flight sessions, and clears overlays immediately. `PathSense.enable()` resumes. Per-tracker control available via `PathTracker.captureEnabled`.
 - All `PathEvent` callbacks delivered on main thread. Background pipeline posts results via platform main dispatcher (`Dispatchers.Main` / `DispatchQueue.main`).
 
 ## Tests

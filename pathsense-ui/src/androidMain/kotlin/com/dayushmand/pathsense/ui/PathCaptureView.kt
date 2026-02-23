@@ -43,6 +43,7 @@ class PathCaptureView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!tracker.captureEnabled) return super.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val point = event.toPathPoint()

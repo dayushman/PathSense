@@ -34,6 +34,7 @@ public final class PathCaptureView: UIView {
     }
 
     public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard tracker.captureEnabled else { return }
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
         tracker.onDown(
@@ -44,6 +45,7 @@ public final class PathCaptureView: UIView {
     }
 
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard tracker.captureEnabled else { return }
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
         tracker.onMove(
@@ -54,6 +56,7 @@ public final class PathCaptureView: UIView {
     }
 
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard tracker.captureEnabled else { return }
         guard let touch = touches.first else { return }
         let point = touch.location(in: self)
         tracker.onUp(
@@ -240,7 +243,7 @@ final class TouchOverlayView: UIView {
                 return
             #endif
         }
-        if !PathSenseUI.isEnabled { return }
+        if !PathSense.isEnabled { return }
         guard drawingOpacity > 0 else { return }
         let points = tracker.currentPoints
         guard points.count > 1 else { return }

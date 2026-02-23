@@ -32,6 +32,7 @@ public final class PathTrackingWindow: UIWindow {
 
     public override func sendEvent(_ event: UIEvent) {
         super.sendEvent(event)
+        guard tracker.captureEnabled else { return }
         guard let touches = event.allTouches, let touch = touches.first else { return }
         let point = touch.location(in: self)
         let pathPoint = PathPoint(x: Float(point.x), y: Float(point.y), tMillis: Int64(Date().timeIntervalSince1970 * 1000))

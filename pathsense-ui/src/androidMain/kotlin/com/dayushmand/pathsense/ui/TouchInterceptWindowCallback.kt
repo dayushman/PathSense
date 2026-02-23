@@ -24,6 +24,7 @@ internal class TouchInterceptWindowCallback(
     }
 
     private fun observeTouch(event: MotionEvent) {
+        if (!tracker.captureEnabled) return
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 trackingPointerId = event.getPointerId(0)

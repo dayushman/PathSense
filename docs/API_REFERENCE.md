@@ -144,6 +144,70 @@ config.listener = { event in /* ... */ }
 
 ---
 
+## Enable / Disable Path Capture
+
+### PathTracker (per-instance)
+
+| Property         | Default | Description                                                                 |
+| ---------------- | ------- | --------------------------------------------------------------------------- |
+| `captureEnabled` | `true`  | When false, `onDown`/`onMove`/`onUp` no-op; auto-cancels mid-gesture session |
+
+### Global (auto-attach)
+
+#### Android
+
+| API                    | Description                                                     |
+| ---------------------- | --------------------------------------------------------------- |
+| `PathSense.isEnabled`  | Read-only — whether capture is currently enabled                 |
+| `PathSense.disable()`  | Disable capture + cancel sessions + clear overlays immediately   |
+| `PathSense.enable()`   | Enable capture — new gestures processed from next touch          |
+
+#### iOS
+
+| API                    | Description                                                     |
+| ---------------------- | --------------------------------------------------------------- |
+| `PathSense.isEnabled`  | Read-only — whether capture is currently enabled                 |
+| `PathSense.disable()`  | Disable capture + cancel sessions + clear overlays immediately   |
+| `PathSense.enable()`   | Enable capture — new gestures processed from next touch          |
+
+### Usage
+
+**Android:**
+
+```kotlin
+// Disable globally
+PathSense.disable()
+
+// Re-enable
+PathSense.enable()
+
+// Check state
+if (PathSense.isEnabled) { /* tracking active */ }
+
+// Per-tracker (advanced)
+val tracker = PathSense.trackerFor(activity)
+tracker?.captureEnabled = false
+```
+
+**iOS:**
+
+```swift
+// Disable globally
+PathSense.disable()
+
+// Re-enable
+PathSense.enable()
+
+// Check state
+if PathSense.isEnabled { /* tracking active */ }
+
+// Per-tracker (advanced)
+let tracker = PathSense.tracker(for: window)
+tracker?.captureEnabled = false
+```
+
+---
+
 ## Advanced / Manual Integration
 
 For cases where you need direct control over the overlay or capture view:

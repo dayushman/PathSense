@@ -36,6 +36,44 @@ import java.util.WeakHashMap
  */
 object PathSense {
 
+    /**
+     * Whether path capture is currently enabled.
+     * When false, all touch tracking, event emission, and overlay rendering are paused.
+     */
+    var isEnabled: Boolean = true
+        private set
+
+    /**
+     * Disable path capture globally.
+     *
+     * - All active gesture sessions are cancelled
+     * - All overlays are cleared immediately
+     * - New touch events are ignored
+     *
+     * Must be called on the main thread.
+     * Call [enable] to resume.
+     */
+    fun disable() {
+        isEnabled = false
+        attachments.values.forEach { attachment ->
+            attachment.tracker.captureEnabled = false
+            attachment.overlay.clearCanvas()
+        }
+    }
+
+    /**
+     * Enable path capture globally.
+     *
+     * New touch events are processed normally from the next gesture.
+     * Must be called on the main thread.
+     */
+    fun enable() {
+        isEnabled = true
+        attachments.values.forEach { attachment ->
+            attachment.tracker.captureEnabled = true
+        }
+    }
+
     private var initialized = false
     private var config = PathSenseConfig()
     private val attachments = WeakHashMap<Activity, Attachment>()
@@ -65,6 +103,7 @@ object PathSense {
         if (attachments.containsKey(activity)) return
 
         val tracker = PathTracker(config.pathConfig)
+        if (!isEnabled) tracker.captureEnabled = false
         config.listener?.let { l -> tracker.listener = l }
 
         val overlay = PathOverlayView(activity).apply {
