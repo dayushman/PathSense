@@ -1,7 +1,6 @@
 package com.dayushmand.pathsense.sample.view
 
 import android.app.Application
-import com.dayushmand.pathsense.core.PathOverlayConfig
 import com.dayushmand.pathsense.ui.PathSense
 import com.dayushmand.pathsense.ui.PathSenseConfig
 
