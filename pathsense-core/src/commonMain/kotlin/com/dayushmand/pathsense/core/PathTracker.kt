@@ -21,6 +21,11 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
             // If disabling mid-gesture, auto-cancel
             if (!value && sessionId != null) {
                 onCancel()
+                // Drop any pending snapshots so no further events are emitted
+                while (true) {
+                    val result = snapshots.tryReceive()
+                    if (result.isFailure) break
+                }
             }
         }
 
