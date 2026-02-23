@@ -11,7 +11,7 @@ data class PathOverlayConfig(
     var style: PathStyle = PathStyle(),
     var showCrosshair: Boolean = true,
     var showTouchCircle: Boolean = true,
-    var showCoordinateHUD: Boolean = true,
+    var showCoordinateHUD: Boolean = false,
     var hudAlignment: HUDAlignment = HUDAlignment.TOP_LEFT,
     var hudTextColor: Long = 0xFFFFFFFF,      // white
     var hudBackgroundColor: Long = 0xB3000000, // black @ 70% alpha
@@ -22,7 +22,7 @@ data class PathOverlayConfig(
         style = PathStyle(),
         showCrosshair = true,
         showTouchCircle = true,
-        showCoordinateHUD = true,
+        showCoordinateHUD = false,
         hudAlignment = HUDAlignment.TOP_LEFT,
         hudTextColor = 0xFFFFFFFF,
         hudBackgroundColor = 0xB3000000,
