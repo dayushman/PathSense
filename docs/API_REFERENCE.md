@@ -72,7 +72,7 @@ tracker.addRecognizer(customRecognizer)
 | -------------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
 | `debugOnly`          | `true`                   | When true, overlay no-ops in release builds                                                         |
 | `style`              | `PathStyle()`            | Visual style settings                                                                               |
-| `showCrosshair`      | `false`                  | Full-screen crosshair lines at touch position                                                       |
+| `showCrosshair`      | `true`                   | Full-screen crosshair lines at touch position                                                       |
 | `showTouchCircle`    | `true`                   | Circle indicator at current touch point                                                             |
 | `showCoordinateHUD`  | `false`                  | Built-in pill-shaped HUD showing `x: y: dx: dy:` with delta from start point (monospace 13sp)       |
 | `hudAlignment`       | `TOP_LEFT`               | HUD position: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, `CENTER_LEFT`, `CENTER_RIGHT` |
