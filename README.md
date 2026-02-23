@@ -74,7 +74,17 @@ class MyApp : Application() {
 
 Done. The SDK auto-attaches to every Activity, intercepts touches, tracks paths, recognizes gestures, and renders a gradient overlay. No layout changes needed.
 
-**2. (Optional) Customize**
+**2. (Optional) Enable / Disable**
+
+```kotlin
+// Disable path capture
+PathSense.disable()   // stops tracking + clears overlays
+
+// Re-enable
+PathSense.enable()    // resumes from next gesture
+```
+
+**3. (Optional) Customize**
 
 ```kotlin
 PathSense.init(this, PathSenseConfig(
@@ -135,6 +145,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 ```
 
 Done. The SDK intercepts touches on every `UIWindow`, tracks paths, recognizes gestures, and renders a gradient overlay. No view hierarchy changes needed.
+
+**Enable / Disable:**
+
+```swift
+// Disable path capture
+PathSense.disable()   // stops tracking + clears overlays
+
+// Re-enable
+PathSense.enable()    // resumes from next gesture
+```
 
 **Customize:**
 

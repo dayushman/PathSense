@@ -60,6 +60,41 @@ public enum PathSense {
 
     // MARK: Public
 
+    /// Whether path capture is currently enabled.
+    /// When false, all touch tracking, event emission, and overlay rendering are paused.
+    public private(set) static var isEnabled = true
+
+    /// Disable path capture globally.
+    ///
+    /// - All active gesture sessions are cancelled
+    /// - All overlays are cleared immediately
+    /// - New touch events are ignored
+    ///
+    /// Must be called on the main thread.
+    /// Call ``enable()`` to resume.
+    public static func disable() {
+        isEnabled = false
+        let enumerator = attachments.objectEnumerator()
+        while let attachment = enumerator?.nextObject() as? Attachment {
+            attachment.tracker.captureEnabled = false
+            attachment.tracker.clearPoints()
+            attachment.overlay.resetFade()
+            attachment.overlay.setNeedsDisplay()
+        }
+    }
+
+    /// Enable path capture globally.
+    ///
+    /// New touch events are processed normally from the next gesture.
+    /// Must be called on the main thread.
+    public static func enable() {
+        isEnabled = true
+        let enumerator = attachments.objectEnumerator()
+        while let attachment = enumerator?.nextObject() as? Attachment {
+            attachment.tracker.captureEnabled = true
+        }
+    }
+
     /// Whether `configure()` has been called.
     public private(set) static var isConfigured = false
 
@@ -134,6 +169,7 @@ public enum PathSense {
         guard !(window is PathTrackingWindow) else { return }
 
         let tracker = PathTracker()
+        if !isEnabled { tracker.captureEnabled = false }
         if let listener = config.listener {
             tracker.listener = listener
         }
@@ -161,7 +197,7 @@ public enum PathSense {
     // MARK: Event handling (called from swizzled sendEvent)
 
     fileprivate static func handleSendEvent(_ event: UIEvent, in window: UIWindow) {
-        guard PathSenseUI.isEnabled else { return }
+        guard isEnabled else { return }
         guard let attachment = attachments.object(forKey: window) else { return }
 
         // Keep overlay on top of all other subviews

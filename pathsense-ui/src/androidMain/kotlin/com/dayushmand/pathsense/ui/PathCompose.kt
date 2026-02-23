@@ -56,9 +56,10 @@ fun PathCapture(
     }
 
     PathOverlay(
-        modifier = modifier.pointerInput(tracker) {
-            awaitEachGesture {
-                val down = awaitFirstDown()
+    modifier = modifier.pointerInput(tracker) {
+        awaitEachGesture {
+            if (!tracker.captureEnabled) return@awaitEachGesture
+            val down = awaitFirstDown()
                 fadeStart.value = null
                 val downPoint = down.position.toPoint()
                 startPoint.value = downPoint

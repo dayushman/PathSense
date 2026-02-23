@@ -14,6 +14,16 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
     // Needed for Swift interop — KMM doesn't export default param values to ObjC/Swift
     constructor() : this(PathConfig())
 
+    var captureEnabled: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            // If disabling mid-gesture, auto-cancel
+            if (!value && sessionId != null) {
+                onCancel()
+            }
+        }
+
     var listener: (PathEvent) -> Unit = {}
 
     private val buffer = PointBuffer(config.maxPoints)
@@ -66,6 +76,7 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
     }
 
     fun onDown(p: PathPoint) {
+        if (!captureEnabled) return
         val id = newSessionId()
         sessionId = id
         clearPoints()
@@ -81,6 +92,7 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
     }
 
     fun onMove(p: PathPoint) {
+        if (!captureEnabled) return
         val id = sessionId ?: return
         val intervalMs = max(1, (1000f / config.samplingHz).roundToLong())
         val last = lastAccepted
@@ -100,6 +112,7 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
     }
 
     fun onUp(p: PathPoint) {
+        if (!captureEnabled) return
         val id = sessionId ?: return
         val smoothed = smooth(p)
         pushPoint(smoothed)

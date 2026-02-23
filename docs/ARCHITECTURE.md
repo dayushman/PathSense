@@ -93,6 +93,7 @@ Built-in templates: **Line**, **Circle**, **Rectangle**, **Zigzag**.
 - **Zero touch-to-pixel latency**: Smoothing runs inline on the main thread; the renderer reads smoothed points directly. All heavy computation (resampling, metrics, recognition) runs on `Dispatchers.Default` and never blocks rendering.
 - **Non-intrusive overlays**: Overlay views are transparent to touch events (`isUserInteractionEnabled = false` / `clickable = false`); the app functions normally.
 - **Rendering is opt-in**: Consumers add `:pathsense-ui` only if they want visual overlays. The core module works standalone.
+- **Runtime enable/disable**: Two-level control — `PathTracker.captureEnabled` for per-instance gating (in core, no UI dependency), and `PathSense.disable()` / `PathSense.enable()` for global toggle (in UI module). Disabling mid-gesture auto-cancels the session and clears all overlays immediately. The core-level guard ensures all integration paths (auto-attach, manual views, Compose) are covered. UI-layer guards are an additional optimization to avoid unnecessary touch processing overhead.
 
 ---
 

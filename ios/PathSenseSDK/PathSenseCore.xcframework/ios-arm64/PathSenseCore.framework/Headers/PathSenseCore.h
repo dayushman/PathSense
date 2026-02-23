@@ -397,6 +397,7 @@ __attribute__((swift_name("PathTracker")))
 - (void)onMoveP:(PSCPathPoint *)p __attribute__((swift_name("onMove(p:)")));
 - (void)onUpP:(PSCPathPoint *)p __attribute__((swift_name("onUp(p:)")));
 - (void)removeRecognizerR:(id<PSCGestureRecognizer>)r __attribute__((swift_name("removeRecognizer(r:)")));
+@property BOOL captureEnabled __attribute__((swift_name("captureEnabled")));
 @property (readonly) NSArray<PSCPathPoint *> *currentPoints __attribute__((swift_name("currentPoints")));
 @property void (^listener)(PSCPathEvent *) __attribute__((swift_name("listener")));
 @end
