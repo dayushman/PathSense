@@ -3,6 +3,7 @@ package com.dayushmand.pathsense.core
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,6 +31,11 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
         }
 
     var listener: (PathEvent) -> Unit = {}
+
+    /** Monotonically-increasing counter bumped on every point add/clear.
+     *  Used by overlay views to invalidate caches (bounding box, gradient). */
+    var pointsVersion: Int = 0
+        private set
 
     private val buffer = PointBuffer(config.maxPoints)
     private val recognizers = LinkedHashSet<GestureRecognizer>()
@@ -78,6 +84,17 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
         prevSmoothed1 = null
         prevSmoothed2 = null
         lastAccepted = null
+        pointsVersion++
+    }
+
+    /**
+     * Cancel the background analysis scope and close the snapshots channel.
+     * Call this when the tracker is no longer needed (e.g. Activity destroyed,
+     * iOS view deallocated) to prevent coroutine/resource leaks.
+     */
+    fun destroy() {
+        snapshots.close()
+        analysisScope.cancel()
     }
 
     fun onDown(p: PathPoint) {
@@ -140,6 +157,7 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
         prevSmoothed2 = prevSmoothed1
         prevSmoothed1 = point
         buffer.add(point)
+        pointsVersion++
     }
 
     private fun smooth(point: PathPoint): PathPoint {
@@ -156,7 +174,7 @@ class PathTracker(private val config: PathConfig = PathConfig()) {
         var best: GestureMatch? = null
         for (recognizer in recognizers) {
             val match = recognizer.recognize(points) ?: continue
-            if (best == null || match.score > best!!.score) {
+            if (best == null || match.score > best.score) {
                 best = match
             }
         }

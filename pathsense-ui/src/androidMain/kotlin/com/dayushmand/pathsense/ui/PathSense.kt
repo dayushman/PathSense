@@ -91,6 +91,19 @@ object PathSense {
     }
 
     /**
+     * Programmatically clear all rendered paths and overlays across all
+     * attached Activities. Does **not** disable capture — new gestures
+     * will still be tracked.
+     *
+     * Must be called on the main thread.
+     */
+    fun clearCanvas() {
+        attachments.values.forEach { attachment ->
+            attachment.overlay.clearCanvas()
+        }
+    }
+
+    /**
      * Returns the [PathTracker] attached to the given [activity], or
      * `null` if the SDK has not yet attached to it.
      */
@@ -134,6 +147,7 @@ object PathSense {
         val attachment = attachments.remove(activity) ?: return
         val decor = activity.window.decorView as? FrameLayout
         decor?.removeView(attachment.overlay)
+        attachment.tracker.destroy()
     }
 
     private class Attachment(

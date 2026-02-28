@@ -74,12 +74,9 @@ public enum PathSense {
     /// Call ``enable()`` to resume.
     public static func disable() {
         isEnabled = false
-        let enumerator = attachments.objectEnumerator()
-        while let attachment = enumerator?.nextObject() as? Attachment {
+        enumerateAttachments { attachment in
             attachment.tracker.captureEnabled = false
-            attachment.tracker.clearPoints()
-            attachment.overlay.resetFade()
-            attachment.overlay.setNeedsDisplay()
+            attachment.overlay.clearCanvas()
         }
     }
 
@@ -89,9 +86,24 @@ public enum PathSense {
     /// Must be called on the main thread.
     public static func enable() {
         isEnabled = true
-        let enumerator = attachments.objectEnumerator()
-        while let attachment = enumerator?.nextObject() as? Attachment {
+        enumerateAttachments { attachment in
             attachment.tracker.captureEnabled = true
+        }
+    }
+
+    /// Programmatically clear all rendered paths and overlays across all
+    /// attached windows. Does **not** disable capture — new gestures
+    /// will still be tracked.
+    ///
+    /// Safe to call from any context (e.g. button actions). The clear is
+    /// deferred to the next run-loop cycle so it executes **after** the
+    /// swizzled `sendEvent` finishes processing any in-flight touches
+    /// (which would otherwise re-add points via `onUp`).
+    public static func clearCanvas() {
+        DispatchQueue.main.async {
+            enumerateAttachments { attachment in
+                attachment.overlay.clearCanvas()
+            }
         }
     }
 
@@ -123,6 +135,7 @@ public enum PathSense {
                 attach(to: window)
             }
         }
+        updateTopmostOverlay()
     }
 
     /// Returns the `PathTracker` attached to the given window, or `nil`
@@ -135,6 +148,44 @@ public enum PathSense {
 
     /// Weak-key map from UIWindow → Attachment (auto-cleared when window deallocs).
     private static let attachments = NSMapTable<UIWindow, Attachment>.weakToStrongObjects()
+
+    /// The window whose overlay is currently visible (topmost non-PathTrackingWindow).
+    private static weak var activeWindow: UIWindow?
+
+    private static func enumerateAttachments(_ block: (Attachment) -> Void) {
+        let enumerator = attachments.objectEnumerator()
+        while let attachment = enumerator?.nextObject() as? Attachment {
+            block(attachment)
+        }
+    }
+
+    /// Show the overlay only on the topmost attached window; hide all others.
+    private static func updateTopmostOverlay() {
+        var topWindow: UIWindow?
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                guard !(window is PathTrackingWindow),
+                      !window.isHidden,
+                      attachments.object(forKey: window) != nil else { continue }
+                if let current = topWindow {
+                    if window.windowLevel >= current.windowLevel {
+                        topWindow = window
+                    }
+                } else {
+                    topWindow = window
+                }
+            }
+        }
+
+        let keyEnumerator = attachments.keyEnumerator()
+        while let window = keyEnumerator.nextObject() as? UIWindow {
+            if let attachment = attachments.object(forKey: window) {
+                attachment.overlay.isHidden = (window !== topWindow)
+            }
+        }
+        activeWindow = topWindow
+    }
 
     // MARK: Swizzle
 
@@ -158,6 +209,21 @@ public enum PathSense {
         ) { note in
             guard let window = note.object as? UIWindow else { return }
             attach(to: window)
+            updateTopmostOverlay()
+        }
+        NotificationCenter.default.addObserver(
+            forName: UIWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            updateTopmostOverlay()
+        }
+        NotificationCenter.default.addObserver(
+            forName: UIWindow.didBecomeHiddenNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            updateTopmostOverlay()
         }
     }
 
@@ -179,14 +245,15 @@ public enum PathSense {
         overlay.isUserInteractionEnabled = false
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         overlay.frame = window.bounds
+        overlay.isHidden = true  // updateTopmostOverlay() will decide visibility
         window.addSubview(overlay)
+        window.bringSubviewToFront(overlay)
 
         attachments.setObject(Attachment(tracker: tracker, overlay: overlay), forKey: window)
     }
 
     private static func updateAttachedOverlays() {
-        let enumerator = attachments.objectEnumerator()
-        while let attachment = enumerator?.nextObject() as? Attachment {
+        enumerateAttachments { attachment in
             attachment.overlay.overlayConfig = config.overlayConfig
             if let listener = config.listener {
                 attachment.tracker.listener = listener
@@ -199,10 +266,6 @@ public enum PathSense {
     fileprivate static func handleSendEvent(_ event: UIEvent, in window: UIWindow) {
         guard isEnabled else { return }
         guard let attachment = attachments.object(forKey: window) else { return }
-
-        // Keep overlay on top of all other subviews
-        window.bringSubviewToFront(attachment.overlay)
-
         guard let touches = event.allTouches, let touch = touches.first else { return }
         let point = touch.location(in: window)
         let pathPoint = PathPoint(
@@ -238,6 +301,10 @@ public enum PathSense {
         init(tracker: PathTracker, overlay: TouchOverlayView) {
             self.tracker = tracker
             self.overlay = overlay
+        }
+
+        deinit {
+            tracker.destroy()
         }
     }
 }

@@ -1,0 +1,5 @@
+framework module "PathSenseCore" {
+    umbrella header "PathSenseCore.h"
+    export *
+    module * { export * }
+}

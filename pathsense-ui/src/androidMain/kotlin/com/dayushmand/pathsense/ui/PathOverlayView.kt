@@ -37,6 +37,9 @@ class PathOverlayView @JvmOverloads constructor(
     var overlayConfig: PathOverlayConfig = PathOverlayConfig()
         set(value) {
             field = value
+            cachedGradient = null
+            cachedGradientStart = null
+            cachedGradientEnd = null
             applyHudConfig()
             invalidate()
         }
@@ -45,6 +48,33 @@ class PathOverlayView @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
     }
+    private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+    }
+    private val crossPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+    private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    // LinearGradient cache — reuse when start/end points haven't changed
+    private var cachedGradientStart: PathPoint? = null
+    private var cachedGradientEnd: PathPoint? = null
+    private var cachedGradient: LinearGradient? = null
+
+    // Points list cache — avoids toList() allocation when points haven't changed
+    private var cachedPoints: List<PathPoint> = emptyList()
+    private var cachedPointsVersion: Int = -1
+
+    // Bounding box cache — recompute only when tracker's pointsVersion changes
+    private var cachedBoundingBox: AndroidRectF? = null
+    private var cachedBboxVersion: Int = -1
 
     private var fadeStartTime: Long? = null
     private var startPoint: PathPoint? = null
@@ -136,23 +166,18 @@ class PathOverlayView @JvmOverloads constructor(
         hudLabel.layoutParams = lp
     }
 
-    fun notifyPathStarted() {
-        fadeStartTime = null
-        invalidate()
-    }
-
-    fun notifyPathEnded() {
-        if (overlayConfig.style.fadeOutMs > 0) {
-            fadeStartTime = SystemClock.uptimeMillis()
-            invalidate()
-        }
-    }
-
     /** Called by the touch interceptor when a new touch starts. */
     fun notifyTouchStart(point: PathPoint) {
         handler.removeCallbacks(resetHudRunnable)
         startPoint = point
         fadeStartTime = null
+        cachedGradient = null
+        cachedGradientStart = null
+        cachedGradientEnd = null
+        cachedPoints = emptyList()
+        cachedPointsVersion = -1
+        cachedBoundingBox = null
+        cachedBboxVersion = -1
         updateHudText(point)
         invalidate()
     }
@@ -189,6 +214,13 @@ class PathOverlayView @JvmOverloads constructor(
         tracker?.clearPoints()
         fadeStartTime = null
         startPoint = null
+        cachedGradient = null
+        cachedGradientStart = null
+        cachedGradientEnd = null
+        cachedPoints = emptyList()
+        cachedPointsVersion = -1
+        cachedBoundingBox = null
+        cachedBboxVersion = -1
         hudLabel.text = HUD_DEFAULT
         invalidate()
     }
@@ -210,7 +242,12 @@ class PathOverlayView @JvmOverloads constructor(
         super.onDraw(canvas)
         if (!isDebugBuild() && overlayConfig.debugOnly) return
 
-        val points = tracker?.currentPoints.orEmpty()
+        val currentVersion = tracker?.pointsVersion ?: -1
+        if (cachedPointsVersion != currentVersion) {
+            cachedPoints = tracker?.currentPoints.orEmpty()
+            cachedPointsVersion = currentVersion
+        }
+        val points = cachedPoints
         if (points.isEmpty()) {
             // No points — ensure HUD label is fully opaque (reset state)
             hudLabel.alpha = 1f
@@ -233,27 +270,45 @@ class PathOverlayView @JvmOverloads constructor(
 
         val start = points.first()
         val end = points.last()
-        paint.shader = LinearGradient(
-            start.x,
-            start.y,
-            end.x,
-            end.y,
-            style.gradientStartColor.toColorInt(),
-            style.gradientEndColor.toColorInt(),
-            Shader.TileMode.CLAMP,
-        )
+        val dx = (end.x - start.x).toDouble()
+        val dy = (end.y - start.y).toDouble()
+        val isTap = kotlin.math.hypot(dx, dy) < 1.0
 
-        buildPath(points, path)
-        canvas.drawPath(path, paint)
+        if (isTap) {
+            // For taps (zero-length path), draw a filled dot instead of a gradient trail
+            dotPaint.color = style.gradientStartColor.toColorInt()
+            dotPaint.alpha = (fadeAlpha * 255).toInt().coerceIn(0, 255)
+            val radius = max(style.strokeWidthPx, 4f)
+            canvas.drawCircle(end.x, end.y, radius, dotPaint)
+        } else {
+            if (cachedGradient == null
+                || cachedGradientStart?.x != start.x || cachedGradientStart?.y != start.y
+                || cachedGradientEnd?.x != end.x || cachedGradientEnd?.y != end.y
+            ) {
+                cachedGradient = LinearGradient(
+                    start.x, start.y, end.x, end.y,
+                    style.gradientStartColor.toColorInt(),
+                    style.gradientEndColor.toColorInt(),
+                    Shader.TileMode.CLAMP,
+                )
+                cachedGradientStart = start
+                cachedGradientEnd = end
+            }
+            paint.shader = cachedGradient
+
+            buildPath(points, path)
+            canvas.drawPath(path, paint)
+        }
 
         if (style.showBoundingBox) {
-            val bbox = computeBoundingBox(points)
-            val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                this.style = Paint.Style.STROKE
-                strokeWidth = max(2f, style.strokeWidthPx / 2f)
-                color = style.boundingBoxColor.toColorInt()
-                this.alpha = (fadeAlpha * 255).toInt().coerceIn(0, 255)
+            if (cachedBoundingBox == null || cachedBboxVersion != currentVersion) {
+                cachedBoundingBox = computeBoundingBox(points)
+                cachedBboxVersion = currentVersion
             }
+            val bbox = cachedBoundingBox ?: return
+            boxPaint.strokeWidth = max(2f, style.strokeWidthPx / 2f)
+            boxPaint.color = style.boundingBoxColor.toColorInt()
+            boxPaint.alpha = (fadeAlpha * 255).toInt().coerceIn(0, 255)
             canvas.drawRect(bbox, boxPaint)
         }
 
@@ -296,23 +351,15 @@ class PathOverlayView @JvmOverloads constructor(
     }
 
     private fun drawCrosshair(canvas: Canvas, point: PathPoint, alpha: Float) {
-        val crossPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-            color = overlayConfig.style.gradientEndColor.toColorInt()
-            this.alpha = (alpha * 160).toInt().coerceIn(0, 255)
-        }
+        crossPaint.color = overlayConfig.style.gradientEndColor.toColorInt()
+        crossPaint.alpha = (alpha * 160).toInt().coerceIn(0, 255)
         canvas.drawLine(0f, point.y, width.toFloat(), point.y, crossPaint)
         canvas.drawLine(point.x, 0f, point.x, height.toFloat(), crossPaint)
     }
 
     private fun drawTouchCircle(canvas: Canvas, point: PathPoint, alpha: Float) {
-        val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 3f
-            color = overlayConfig.style.gradientStartColor.toColorInt()
-            this.alpha = (alpha * 200).toInt().coerceIn(0, 255)
-        }
+        circlePaint.color = overlayConfig.style.gradientStartColor.toColorInt()
+        circlePaint.alpha = (alpha * 200).toInt().coerceIn(0, 255)
         val radius = max(16f, overlayConfig.style.strokeWidthPx * 3f)
         canvas.drawCircle(point.x, point.y, radius, circlePaint)
     }

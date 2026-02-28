@@ -30,6 +30,10 @@ public final class PathTrackingWindow: UIWindow {
         overlayView.frame = bounds
     }
 
+    public func clearCanvas() {
+        overlayView.clearCanvas()
+    }
+
     public override func sendEvent(_ event: UIEvent) {
         super.sendEvent(event)
         guard tracker.captureEnabled else { return }

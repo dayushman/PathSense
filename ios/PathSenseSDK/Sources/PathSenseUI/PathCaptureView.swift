@@ -28,9 +28,7 @@ public final class PathCaptureView: UIView {
     }
 
     public func clearCanvas() {
-        tracker.clearPoints()
-        overlayView.resetFade()
-        overlayView.setNeedsDisplay()
+        overlayView.clearCanvas()
     }
 
     public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -82,6 +80,10 @@ final class TouchOverlayView: UIView {
     private var startPoint: CGPoint?
     private var drawingOpacity: Float = 1.0
     private var displayLink: CADisplayLink?
+
+    // Bounding box cache — recomputed only when tracker's pointsVersion changes
+    private var cachedBoundingBox: CGRect?
+    private var cachedBboxVersion: Int32 = -1
 
     private static let hudDefaultText = "x: \u{2013}  y: \u{2013}  dx: \u{2013}  dy: \u{2013}"
 
@@ -167,6 +169,8 @@ final class TouchOverlayView: UIView {
 
     func notifyTouchStart(at point: CGPoint) {
         startPoint = point
+        cachedBoundingBox = nil
+        cachedBboxVersion = -1
         resetFade()
         updateHudText(current: point)
         setNeedsDisplay()
@@ -184,21 +188,27 @@ final class TouchOverlayView: UIView {
     }
 
     func notifyTouchCancel() {
+        displayLink?.invalidate()
+        displayLink = nil
+        tracker.clearPoints()
+        fadeStart = nil
+        drawingOpacity = 1.0
         startPoint = nil
+        cachedBoundingBox = nil
+        cachedBboxVersion = -1
         hudLabel.text = Self.hudDefaultText
         setNeedsLayout()
-        startFadeIfNeeded()
         setNeedsDisplay()
     }
 
-    func resetFade() {
+    private func resetFade() {
         displayLink?.invalidate()
         displayLink = nil
         drawingOpacity = 1.0
         fadeStart = nil
     }
 
-    func startFadeIfNeeded() {
+    private func startFadeIfNeeded() {
         guard overlayConfig.style.fadeOutMs > 0 else { return }
         fadeStart = Date()
         displayLink?.invalidate()
@@ -221,6 +231,7 @@ final class TouchOverlayView: UIView {
         if t >= 1.0 {
             displayLink?.invalidate()
             displayLink = nil
+            tracker.clearPoints()
             startPoint = nil
             hudLabel.text = Self.hudDefaultText
             setNeedsLayout()
@@ -235,6 +246,25 @@ final class TouchOverlayView: UIView {
         hudLabel.text = "x: \(Int(current.x))  y: \(Int(current.y))  dx: \(Int(dx))  dy: \(Int(dy))"
     }
 
+    func clearCaches() {
+        cachedBoundingBox = nil
+        cachedBboxVersion = -1
+    }
+
+    func clearCanvas() {
+        displayLink?.invalidate()
+        displayLink = nil
+        tracker.clearPoints()
+        fadeStart = nil
+        drawingOpacity = 1.0
+        startPoint = nil
+        cachedBoundingBox = nil
+        cachedBboxVersion = -1
+        hudLabel.text = Self.hudDefaultText
+        setNeedsLayout()
+        setNeedsDisplay()
+    }
+
     // MARK: - Drawing
 
     override func draw(_ rect: CGRect) {
@@ -243,13 +273,32 @@ final class TouchOverlayView: UIView {
                 return
             #endif
         }
-        if !PathSense.isEnabled { return }
+        // Note: the global PathSense.isEnabled check was intentionally removed here.
+        // Drawing is guarded by drawingOpacity (fade) and the absence of points
+        // (clearPoints() is called by disable()). This allows PathCaptureView
+        // (manual integration) to work independently of the global PathSense state.
         guard drawingOpacity > 0 else { return }
         let points = tracker.currentPoints
-        guard points.count > 1 else { return }
+        guard !points.isEmpty else { return }
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
 
         ctx.setAlpha(CGFloat(drawingOpacity))
+
+        // --- Tap dot (single-point or near-zero-distance gesture, matching Android's isTap logic) ---
+        let first = points[0]
+        let last = points[points.count - 1]
+        let dx = Double(last.x - first.x)
+        let dy = Double(last.y - first.y)
+        let isTap = hypot(dx, dy) < 1.0
+
+        if isTap {
+            let radius = max(overlayConfig.style.strokeWidth, 4.0)
+            ctx.setFillColor(overlayConfig.style.gradientStartUIColor.cgColor)
+            ctx.fillEllipse(in: CGRect(
+                x: CGFloat(last.x) - radius, y: CGFloat(last.y) - radius,
+                width: radius * 2, height: radius * 2))
+            return
+        }
 
         // --- Gradient trail ---
         let path = UIBezierPath()
@@ -315,18 +364,23 @@ final class TouchOverlayView: UIView {
 
         // --- Bounding box (optional, off by default, matching Android) ---
         if overlayConfig.style.showBoundingBox {
-            var minX = CGFloat.greatestFiniteMagnitude
-            var minY = CGFloat.greatestFiniteMagnitude
-            var maxX = -CGFloat.greatestFiniteMagnitude
-            var maxY = -CGFloat.greatestFiniteMagnitude
-            for p in points {
-                minX = min(minX, CGFloat(p.x))
-                minY = min(minY, CGFloat(p.y))
-                maxX = max(maxX, CGFloat(p.x))
-                maxY = max(maxY, CGFloat(p.y))
+            let currentVersion = tracker.pointsVersion
+            if cachedBoundingBox == nil || cachedBboxVersion != currentVersion {
+                var minX = CGFloat.greatestFiniteMagnitude
+                var minY = CGFloat.greatestFiniteMagnitude
+                var maxX = -CGFloat.greatestFiniteMagnitude
+                var maxY = -CGFloat.greatestFiniteMagnitude
+                for p in points {
+                    minX = min(minX, CGFloat(p.x))
+                    minY = min(minY, CGFloat(p.y))
+                    maxX = max(maxX, CGFloat(p.x))
+                    maxY = max(maxY, CGFloat(p.y))
+                }
+                cachedBoundingBox = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+                cachedBboxVersion = currentVersion
             }
-            let boxRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
-            let boxPath = UIBezierPath(rect: boxRect)
+            guard let bbox = cachedBoundingBox else { return }
+            let boxPath = UIBezierPath(rect: bbox)
             overlayConfig.style.boundingBoxUIColor.setStroke()
             boxPath.lineWidth = max(2.0, overlayConfig.style.strokeWidth / 2.0)
             boxPath.stroke()
