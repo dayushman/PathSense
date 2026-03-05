@@ -392,6 +392,7 @@ __attribute__((swift_name("PathTracker")))
 - (instancetype)initWithConfig:(PSCPathConfig *)config __attribute__((swift_name("init(config:)"))) __attribute__((objc_designated_initializer));
 - (void)addRecognizerR:(id<PSCGestureRecognizer>)r __attribute__((swift_name("addRecognizer(r:)")));
 - (void)clearPoints __attribute__((swift_name("clearPoints()")));
+- (void)destroy __attribute__((swift_name("destroy()")));
 - (void)onCancel __attribute__((swift_name("onCancel()")));
 - (void)onDownP:(PSCPathPoint *)p __attribute__((swift_name("onDown(p:)")));
 - (void)onMoveP:(PSCPathPoint *)p __attribute__((swift_name("onMove(p:)")));
@@ -400,6 +401,7 @@ __attribute__((swift_name("PathTracker")))
 @property BOOL captureEnabled __attribute__((swift_name("captureEnabled")));
 @property (readonly) NSArray<PSCPathPoint *> *currentPoints __attribute__((swift_name("currentPoints")));
 @property void (^listener)(PSCPathEvent *) __attribute__((swift_name("listener")));
+@property (readonly) int32_t pointsVersion __attribute__((swift_name("pointsVersion")));
 @end
 
 __attribute__((objc_subclassing_restricted))
