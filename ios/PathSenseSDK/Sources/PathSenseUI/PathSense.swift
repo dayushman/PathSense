@@ -165,23 +165,14 @@ public enum PathSense {
     /// Show the overlay only on the topmost attached window; hide all others.
     /// If a gesture is in progress, keeps that window's overlay visible instead.
     private static func updateTopmostOverlay() {
-        // If a gesture is in progress, don't change overlay visibility
-        if gestureWindow != nil {
-            return
-        }
+        if gestureWindow != nil { return }
         var topWindow: UIWindow?
-        var candidateCount = 0
-        
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
                 guard !(window is PathTrackingWindow),
                       !window.isHidden,
-                      attachments.object(forKey: window) != nil else {
-                    continue
-                }
-                
-                candidateCount += 1
+                      attachments.object(forKey: window) != nil else { continue }
                 if let current = topWindow {
                     if window.windowLevel >= current.windowLevel {
                         topWindow = window
@@ -195,8 +186,7 @@ public enum PathSense {
         let keyEnumerator = attachments.keyEnumerator()
         while let window = keyEnumerator.nextObject() as? UIWindow {
             if let attachment = attachments.object(forKey: window) {
-                let shouldHide = (window !== topWindow)
-                attachment.overlay.isHidden = shouldHide
+                attachment.overlay.isHidden = (window !== topWindow)
             }
         }
         activeWindow = topWindow
@@ -230,14 +220,14 @@ public enum PathSense {
             forName: UIWindow.didBecomeKeyNotification,
             object: nil,
             queue: .main
-        ) { note in
+        ) { _ in
             updateTopmostOverlay()
         }
         NotificationCenter.default.addObserver(
             forName: UIWindow.didBecomeHiddenNotification,
             object: nil,
             queue: .main
-        ) { note in
+        ) { _ in
             updateTopmostOverlay()
         }
     }
@@ -245,14 +235,10 @@ public enum PathSense {
     // MARK: Attach / Detach
 
     static func attach(to window: UIWindow) {
-        guard attachments.object(forKey: window) == nil else {
-            return
-        }
+        guard attachments.object(forKey: window) == nil else { return }
         
         // PathTrackingWindow already has its own tracking — skip to avoid double-tracking.
-        guard !(window is PathTrackingWindow) else {
-            return
-        }
+        guard !(window is PathTrackingWindow) else { return }
 
         let tracker = PathTracker()
         if !isEnabled { tracker.captureEnabled = false }
@@ -287,10 +273,7 @@ public enum PathSense {
     fileprivate static func handleSendEvent(_ event: UIEvent, in window: UIWindow) {
         guard isEnabled else { return }
         
-        guard let attachment = attachments.object(forKey: window) else {
-            // Window not attached - this is expected for PathTrackingWindow
-            return
-        }
+        guard let attachment = attachments.object(forKey: window) else { return }
         
         guard let touches = event.allTouches, let touch = touches.first else { return }
         let point = touch.location(in: window)
@@ -302,19 +285,14 @@ public enum PathSense {
 
         switch touch.phase {
         case .began:
-            // Mark gesture as starting on this window
             gestureWindow = window
-            
-            // Make this window's overlay visible when it receives a touch
             if attachment.overlay.isHidden {
-                // Hide all other overlays
                 let keyEnumerator = attachments.keyEnumerator()
                 while let w = keyEnumerator.nextObject() as? UIWindow {
                     if let att = attachments.object(forKey: w), w !== window {
                         att.overlay.isHidden = true
                     }
                 }
-                // Show this window's overlay and bring to front
                 attachment.overlay.isHidden = false
                 window.bringSubviewToFront(attachment.overlay)
                 activeWindow = window
@@ -328,14 +306,10 @@ public enum PathSense {
         case .ended:
             attachment.tracker.onUp(p: pathPoint)
             attachment.overlay.notifyTouchEnd(at: point)
-            
-            // Clear gesture window - allow updateTopmostOverlay to run normally now
             gestureWindow = nil
         case .cancelled:
             attachment.tracker.onCancel()
             attachment.overlay.notifyTouchCancel()
-            
-            // Clear gesture window
             gestureWindow = nil
         default:
             break
@@ -371,16 +345,7 @@ extension UIWindow {
         _pathSense_sendEvent(event)
 
         // Forward to PathSense — skip PathTrackingWindow (has its own tracking)
-        guard PathSense.isConfigured else {
-            // Not configured yet
-            return
-        }
-        
-        guard !(self is PathTrackingWindow) else {
-            // PathTrackingWindow handles its own events
-            return
-        }
-        
+        guard PathSense.isConfigured, !(self is PathTrackingWindow) else { return }
         PathSense.handleSendEvent(event, in: self)
     }
 }
