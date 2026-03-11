@@ -159,7 +159,7 @@ fun PathOverlay(
     }
 
     val cachedPath = remember { Path() }
-    var cachedVersion = remember { -1 }
+    val cachedVersion = remember { mutableStateOf(-1) }
 
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.matchParentSize()) {
@@ -187,10 +187,10 @@ fun PathOverlay(
                 )
             } else {
                 val path = cachedPath.apply {
-                    if (cachedVersion != tracker.pointsVersion) {
+                    if (cachedVersion.value != tracker.pointsVersion) {
                         reset()
                         buildComposePathInto(this, points)
-                        cachedVersion = tracker.pointsVersion
+                        cachedVersion.value = tracker.pointsVersion
                     }
                 }
                 val brush = Brush.linearGradient(

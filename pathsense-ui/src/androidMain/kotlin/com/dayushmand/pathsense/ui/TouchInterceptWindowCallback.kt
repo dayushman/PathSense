@@ -14,6 +14,8 @@ internal class TouchInterceptWindowCallback(
     private val wrapped: Window.Callback,
     private val tracker: PathTracker,
     private val overlayView: PathOverlayView,
+    private val onGestureStart: (() -> Unit)? = null,
+    private val onGestureFinish: (() -> Unit)? = null,
 ) : Window.Callback by wrapped {
 
     private var trackingPointerId = -1
@@ -29,6 +31,7 @@ internal class TouchInterceptWindowCallback(
             MotionEvent.ACTION_DOWN -> {
                 trackingPointerId = event.getPointerId(0)
                 val point = event.toPathPoint(0)
+                onGestureStart?.invoke()
                 tracker.onDown(point)
                 processHistory(event, 0)
                 overlayView.notifyTouchStart(point)
@@ -53,6 +56,7 @@ internal class TouchInterceptWindowCallback(
                     overlayView.notifyTouchEnd(point)
                 }
                 trackingPointerId = -1
+                onGestureFinish?.invoke()
             }
 
             MotionEvent.ACTION_POINTER_UP -> {
@@ -62,6 +66,7 @@ internal class TouchInterceptWindowCallback(
                     tracker.onUp(point)
                     overlayView.notifyTouchEnd(point)
                     trackingPointerId = -1
+                    onGestureFinish?.invoke()
                 }
             }
 
@@ -69,6 +74,7 @@ internal class TouchInterceptWindowCallback(
                 tracker.onCancel()
                 overlayView.notifyTouchCancel()
                 trackingPointerId = -1
+                onGestureFinish?.invoke()
             }
         }
     }
