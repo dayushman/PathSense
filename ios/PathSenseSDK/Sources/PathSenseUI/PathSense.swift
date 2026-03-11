@@ -151,6 +151,9 @@ public enum PathSense {
 
     /// The window whose overlay is currently visible (topmost non-PathTrackingWindow).
     private static weak var activeWindow: UIWindow?
+    
+    /// The window currently handling a gesture (touch in progress)
+    private static weak var gestureWindow: UIWindow?
 
     private static func enumerateAttachments(_ block: (Attachment) -> Void) {
         let enumerator = attachments.objectEnumerator()
@@ -160,7 +163,9 @@ public enum PathSense {
     }
 
     /// Show the overlay only on the topmost attached window; hide all others.
+    /// If a gesture is in progress, keeps that window's overlay visible instead.
     private static func updateTopmostOverlay() {
+        if gestureWindow != nil { return }
         var topWindow: UIWindow?
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
@@ -231,6 +236,7 @@ public enum PathSense {
 
     static func attach(to window: UIWindow) {
         guard attachments.object(forKey: window) == nil else { return }
+        
         // PathTrackingWindow already has its own tracking — skip to avoid double-tracking.
         guard !(window is PathTrackingWindow) else { return }
 
@@ -246,6 +252,7 @@ public enum PathSense {
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         overlay.frame = window.bounds
         overlay.isHidden = true  // updateTopmostOverlay() will decide visibility
+        overlay.backgroundColor = .clear
         window.addSubview(overlay)
         window.bringSubviewToFront(overlay)
 
@@ -265,7 +272,9 @@ public enum PathSense {
 
     fileprivate static func handleSendEvent(_ event: UIEvent, in window: UIWindow) {
         guard isEnabled else { return }
+        
         guard let attachment = attachments.object(forKey: window) else { return }
+        
         guard let touches = event.allTouches, let touch = touches.first else { return }
         let point = touch.location(in: window)
         let pathPoint = PathPoint(
@@ -276,6 +285,19 @@ public enum PathSense {
 
         switch touch.phase {
         case .began:
+            gestureWindow = window
+            if attachment.overlay.isHidden {
+                let keyEnumerator = attachments.keyEnumerator()
+                while let w = keyEnumerator.nextObject() as? UIWindow {
+                    if let att = attachments.object(forKey: w), w !== window {
+                        att.overlay.isHidden = true
+                    }
+                }
+                attachment.overlay.isHidden = false
+                window.bringSubviewToFront(attachment.overlay)
+                activeWindow = window
+            }
+            
             attachment.tracker.onDown(p: pathPoint)
             attachment.overlay.notifyTouchStart(at: point)
         case .moved:
@@ -284,9 +306,11 @@ public enum PathSense {
         case .ended:
             attachment.tracker.onUp(p: pathPoint)
             attachment.overlay.notifyTouchEnd(at: point)
+            gestureWindow = nil
         case .cancelled:
             attachment.tracker.onCancel()
             attachment.overlay.notifyTouchCancel()
+            gestureWindow = nil
         default:
             break
         }
