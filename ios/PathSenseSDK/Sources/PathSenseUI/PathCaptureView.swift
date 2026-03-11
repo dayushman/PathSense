@@ -297,46 +297,45 @@ final class TouchOverlayView: UIView {
             ctx.fillEllipse(in: CGRect(
                 x: CGFloat(last.x) - radius, y: CGFloat(last.y) - radius,
                 width: radius * 2, height: radius * 2))
-            return
-        }
+        } else {
+            // --- Gradient trail ---
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: CGFloat(points[0].x), y: CGFloat(points[0].y)))
+            for i in 1..<points.count {
+                let prev = points[i - 1]
+                let curr = points[i]
+                let mid = CGPoint(
+                    x: CGFloat((prev.x + curr.x) / 2.0), y: CGFloat((prev.y + curr.y) / 2.0))
+                path.addQuadCurve(
+                    to: mid, controlPoint: CGPoint(x: CGFloat(prev.x), y: CGFloat(prev.y)))
+            }
+            if let last = points.last {
+                path.addLine(to: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y)))
+            }
 
-        // --- Gradient trail ---
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: CGFloat(points[0].x), y: CGFloat(points[0].y)))
-        for i in 1..<points.count {
-            let prev = points[i - 1]
-            let curr = points[i]
-            let mid = CGPoint(
-                x: CGFloat((prev.x + curr.x) / 2.0), y: CGFloat((prev.y + curr.y) / 2.0))
-            path.addQuadCurve(
-                to: mid, controlPoint: CGPoint(x: CGFloat(prev.x), y: CGFloat(prev.y)))
-        }
-        if let last = points.last {
-            path.addLine(to: CGPoint(x: CGFloat(last.x), y: CGFloat(last.y)))
-        }
+            ctx.saveGState()
+            ctx.addPath(path.cgPath)
+            ctx.setLineWidth(overlayConfig.style.strokeWidth)
+            ctx.setLineCap(overlayConfig.style.strokeLineCap)
+            ctx.replacePathWithStrokedPath()
+            ctx.clip()
 
-        ctx.saveGState()
-        ctx.addPath(path.cgPath)
-        ctx.setLineWidth(overlayConfig.style.strokeWidth)
-        ctx.setLineCap(overlayConfig.style.strokeLineCap)
-        ctx.replacePathWithStrokedPath()
-        ctx.clip()
-
-        let colors =
-            [
-                overlayConfig.style.gradientStartUIColor.cgColor,
-                overlayConfig.style.gradientEndUIColor.cgColor,
-            ] as CFArray
-        let gradient = CGGradient(
-            colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])
-        let start = CGPoint(x: CGFloat(points.first?.x ?? 0), y: CGFloat(points.first?.y ?? 0))
-        let end = CGPoint(x: CGFloat(points.last?.x ?? 0), y: CGFloat(points.last?.y ?? 0))
-        if let gradient = gradient {
-            ctx.drawLinearGradient(
-                gradient, start: start, end: end,
-                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            let colors =
+                [
+                    overlayConfig.style.gradientStartUIColor.cgColor,
+                    overlayConfig.style.gradientEndUIColor.cgColor,
+                ] as CFArray
+            let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])
+            let start = CGPoint(x: CGFloat(points.first?.x ?? 0), y: CGFloat(points.first?.y ?? 0))
+            let end = CGPoint(x: CGFloat(points.last?.x ?? 0), y: CGFloat(points.last?.y ?? 0))
+            if let gradient = gradient {
+                ctx.drawLinearGradient(
+                    gradient, start: start, end: end,
+                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            }
+            ctx.restoreGState()
         }
-        ctx.restoreGState()
 
         // --- Crosshair (2pt stroke, ~63% alpha, matching Android) ---
         if overlayConfig.showCrosshair, let last = points.last {

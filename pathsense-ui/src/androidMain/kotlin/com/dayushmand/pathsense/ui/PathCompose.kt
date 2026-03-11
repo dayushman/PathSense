@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.max
 
 private const val HUD_DEFAULT = "x: \u2013  y: \u2013  dx: \u2013  dy: \u2013"
+private const val TAP_DISTANCE_THRESHOLD = 1.0
 
 @Composable
 fun PathCapture(
@@ -106,7 +108,7 @@ fun PathOverlay(
     val effectiveHudText = hudText ?: if (overlayConfig.showCoordinateHUD) {
         val autoHud = remember { mutableStateOf(HUD_DEFAULT) }
         val startPoint = remember { mutableStateOf<PathPoint?>(null) }
-        LaunchedEffect(tracker) {
+        DisposableEffect(tracker) {
             val previous = tracker.listener
             tracker.listener = { event ->
                 previous(event)
@@ -134,6 +136,9 @@ fun PathOverlay(
                     else -> {}
                 }
             }
+            onDispose {
+                tracker.listener = previous
+            }
         }
         autoHud
     } else null
@@ -153,6 +158,9 @@ fun PathOverlay(
         }
     }
 
+    val cachedPath = remember { Path() }
+    var cachedVersion = remember { -1 }
+
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.matchParentSize()) {
             if (!isDebugBuild() && overlayConfig.debugOnly) return@Canvas
@@ -162,19 +170,41 @@ fun PathOverlay(
             val alpha = computeFadeAlpha(fadeStartMillis?.value, now.value, fadeOutMs)
             if (alpha <= 0f) return@Canvas
 
-            val path = buildComposePath(points)
             val style = overlayConfig.style
-            val brush = Brush.linearGradient(
-                colors = listOf(style.gradientStartColor.toComposeColor(), style.gradientEndColor.toComposeColor()),
-                start = Offset(points.first().x, points.first().y),
-                end = Offset(points.last().x, points.last().y),
-            )
-            drawPath(
-                path = path,
-                brush = brush,
-                style = Stroke(width = style.strokeWidthPx, cap = style.strokeCap.toComposeCap()),
-                alpha = alpha,
-            )
+            val start = points.first()
+            val end = points.last()
+            val dx = (end.x - start.x).toDouble()
+            val dy = (end.y - start.y).toDouble()
+            val isTap = kotlin.math.hypot(dx, dy) < TAP_DISTANCE_THRESHOLD
+
+            if (isTap) {
+                val radius = max(style.strokeWidthPx, 4f)
+                drawCircle(
+                    color = style.gradientStartColor.toComposeColor(),
+                    radius = radius,
+                    center = Offset(end.x, end.y),
+                    alpha = alpha,
+                )
+            } else {
+                val path = cachedPath.apply {
+                    if (cachedVersion != tracker.pointsVersion) {
+                        reset()
+                        buildComposePathInto(this, points)
+                        cachedVersion = tracker.pointsVersion
+                    }
+                }
+                val brush = Brush.linearGradient(
+                    colors = listOf(style.gradientStartColor.toComposeColor(), style.gradientEndColor.toComposeColor()),
+                    start = Offset(start.x, start.y),
+                    end = Offset(end.x, end.y),
+                )
+                drawPath(
+                    path = path,
+                    brush = brush,
+                    style = Stroke(width = style.strokeWidthPx, cap = style.strokeCap.toComposeCap()),
+                    alpha = alpha,
+                )
+            }
 
             if (style.showBoundingBox) {
                 var minX = Float.POSITIVE_INFINITY
@@ -261,9 +291,8 @@ fun PathOverlay(
     }
 }
 
-private fun buildComposePath(points: List<PathPoint>): Path {
-    val path = Path()
-    if (points.isEmpty()) return path
+private fun buildComposePathInto(path: Path, points: List<PathPoint>) {
+    if (points.isEmpty()) return
     path.moveTo(points.first().x, points.first().y)
     for (i in 1 until points.size) {
         val prev = points[i - 1]
@@ -274,7 +303,6 @@ private fun buildComposePath(points: List<PathPoint>): Path {
     }
     val last = points.last()
     path.lineTo(last.x, last.y)
-    return path
 }
 
 private fun Offset.toPoint(): PathPoint {

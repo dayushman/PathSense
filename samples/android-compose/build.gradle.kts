@@ -31,7 +31,7 @@ android {
 }
 
 dependencies {
-    implementation("com.github.dayushman.PathSense:pathsense-ui:0.0.3-alpha")
+    implementation("com.github.dayushman.PathSense:pathsense-ui:0.0.6-alpha")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.compose.ui:ui:1.7.6")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
