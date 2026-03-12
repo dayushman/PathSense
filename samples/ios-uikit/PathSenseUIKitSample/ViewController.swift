@@ -3,16 +3,20 @@ import PathSenseUI
 
 class ViewController: UIViewController {
 
+    private var container: PathSenseContainerView!
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+
+        let contentView = UIView()
+        contentView.backgroundColor = .systemBackground
 
         let label = UILabel()
         label.text = "Draw anywhere on screen"
         label.font = .preferredFont(forTextStyle: .headline)
         label.textColor = .secondaryLabel
         label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
+        contentView.addSubview(label)
 
         let clearButton = UIButton(type: .system)
         clearButton.translatesAutoresizingMaskIntoConstraints = false
@@ -23,20 +27,35 @@ class ViewController: UIViewController {
         clearButton.layer.cornerRadius = 28
         clearButton.clipsToBounds = true
         clearButton.addTarget(self, action: #selector(clearTapped), for: .touchUpInside)
-        view.addSubview(clearButton)
+        contentView.addSubview(clearButton)
 
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            label.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             clearButton.widthAnchor.constraint(equalToConstant: 56),
             clearButton.heightAnchor.constraint(equalToConstant: 56),
-            clearButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
-            clearButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+            clearButton.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor, constant: -24),
+            clearButton.bottomAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+        ])
+
+        var psConfig = PathSenseConfig()
+        psConfig.overlayConfig.debugOnly = false
+        psConfig.overlayConfig.showCoordinateHUD = true
+
+        container = PathSense.wrap(view: contentView, config: psConfig)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+
+        NSLayoutConstraint.activate([
+            container.topAnchor.constraint(equalTo: view.topAnchor),
+            container.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            container.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 
     @objc private func clearTapped() {
-        PathSense.clearCanvas()
+        container.clearCanvas()
     }
 }

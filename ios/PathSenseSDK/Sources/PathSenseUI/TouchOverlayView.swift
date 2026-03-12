@@ -1,75 +1,6 @@
 import PathSenseCore
 import UIKit
 
-public final class PathCaptureView: UIView {
-    public let tracker: PathTracker
-    public var overlayConfig: PathOverlayConfig = PathOverlayConfig() {
-        didSet { overlayView.overlayConfig = overlayConfig }
-    }
-
-    private let overlayView: TouchOverlayView
-
-    public init(tracker: PathTracker) {
-        self.tracker = tracker
-        self.overlayView = TouchOverlayView(tracker: tracker)
-        super.init(frame: .zero)
-        isMultipleTouchEnabled = false
-        overlayView.isUserInteractionEnabled = false
-        addSubview(overlayView)
-    }
-
-    public required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        overlayView.frame = bounds
-    }
-
-    public func clearCanvas() {
-        overlayView.clearCanvas()
-    }
-
-    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard tracker.captureEnabled else { return }
-        guard let touch = touches.first else { return }
-        let point = touch.location(in: self)
-        tracker.onDown(
-            p: PathPoint(
-                x: Float(point.x), y: Float(point.y),
-                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
-        overlayView.notifyTouchStart(at: point)
-    }
-
-    public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard tracker.captureEnabled else { return }
-        guard let touch = touches.first else { return }
-        let point = touch.location(in: self)
-        tracker.onMove(
-            p: PathPoint(
-                x: Float(point.x), y: Float(point.y),
-                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
-        overlayView.notifyTouchMove(to: point)
-    }
-
-    public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard tracker.captureEnabled else { return }
-        guard let touch = touches.first else { return }
-        let point = touch.location(in: self)
-        tracker.onUp(
-            p: PathPoint(
-                x: Float(point.x), y: Float(point.y),
-                tMillis: Int64(Date().timeIntervalSince1970 * 1000)))
-        overlayView.notifyTouchEnd(at: point)
-    }
-
-    public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        tracker.onCancel()
-        overlayView.notifyTouchCancel()
-    }
-}
-
 final class TouchOverlayView: UIView {
     private let tracker: PathTracker
     var overlayConfig: PathOverlayConfig = PathOverlayConfig() {
@@ -224,7 +155,7 @@ final class TouchOverlayView: UIView {
             return
         }
         let elapsed = Date().timeIntervalSince(fadeStart)
-        let duration = TimeInterval(overlayConfig.style.fadeOutMs) / 1000.0  // fadeOutMs is Int64 from Kotlin
+        let duration = TimeInterval(overlayConfig.style.fadeOutMs) / 1000.0
         let t = min(Float(elapsed / duration), 1.0)
         drawingOpacity = 1.0 - t
         setNeedsDisplay()
@@ -273,10 +204,6 @@ final class TouchOverlayView: UIView {
                 return
             #endif
         }
-        // Note: the global PathSense.isEnabled check was intentionally removed here.
-        // Drawing is guarded by drawingOpacity (fade) and the absence of points
-        // (clearPoints() is called by disable()). This allows PathCaptureView
-        // (manual integration) to work independently of the global PathSense state.
         guard drawingOpacity > 0 else { return }
         let points = tracker.currentPoints
         guard !points.isEmpty else { return }

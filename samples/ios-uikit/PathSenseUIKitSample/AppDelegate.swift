@@ -1,4 +1,3 @@
-import PathSenseUI
 import UIKit
 
 @main
@@ -8,10 +7,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        var config = PathSenseConfig()
-        config.overlayConfig.debugOnly = false
-        config.overlayConfig.showCoordinateHUD = true
-        PathSense.configure(config)
         return true
     }
 
