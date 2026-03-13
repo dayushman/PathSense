@@ -39,6 +39,7 @@ import kotlin.math.max
 
 private const val HUD_DEFAULT = "x: \u2013  y: \u2013  dx: \u2013  dy: \u2013"
 private const val TAP_DISTANCE_THRESHOLD = 1.0
+private const val CROSSHAIR_COLOR_ARGB: Long = 0xFFFF00FF
 
 @Composable
 fun PathCapture(
@@ -48,6 +49,7 @@ fun PathCapture(
     onEvent: ((com.dayushmand.pathsense.core.PathEvent) -> Unit)? = null,
 ) {
     val fadeStart = remember { mutableStateOf<Long?>(null) }
+    val isTouchActive = remember { mutableStateOf(false) }
     val startPoint = remember { mutableStateOf<PathPoint?>(null) }
     val hudText = remember { mutableStateOf(HUD_DEFAULT) }
 
@@ -58,11 +60,12 @@ fun PathCapture(
     }
 
     PathOverlay(
-    modifier = modifier.pointerInput(tracker) {
-        awaitEachGesture {
-            if (!tracker.captureEnabled) return@awaitEachGesture
-            val down = awaitFirstDown()
+        modifier = modifier.pointerInput(tracker) {
+            awaitEachGesture {
+                if (!tracker.captureEnabled) return@awaitEachGesture
+                val down = awaitFirstDown()
                 fadeStart.value = null
+                isTouchActive.value = true
                 val downPoint = down.position.toPoint()
                 startPoint.value = downPoint
                 tracker.onDown(downPoint)
@@ -75,6 +78,7 @@ fun PathCapture(
                     if (change.changedToUp()) {
                         val upPoint = change.position.toPoint()
                         tracker.onUp(upPoint)
+                        isTouchActive.value = false
                         hudText.value = formatHud(upPoint, startPoint.value ?: upPoint)
                         fadeStart.value = SystemClock.uptimeMillis()
                         done = true
@@ -89,6 +93,7 @@ fun PathCapture(
         tracker = tracker,
         overlayConfig = overlayConfig,
         fadeStartMillis = fadeStart,
+        isTouchActive = isTouchActive,
         hudText = hudText,
     )
 }
@@ -99,6 +104,7 @@ fun PathOverlay(
     tracker: PathTracker,
     overlayConfig: PathOverlayConfig = PathOverlayConfig(),
     fadeStartMillis: MutableState<Long?>? = null,
+    isTouchActive: MutableState<Boolean>? = null,
     hudText: MutableState<String>? = null,
 ) {
     val now = remember { mutableStateOf(SystemClock.uptimeMillis()) }
@@ -154,6 +160,7 @@ fun PathOverlay(
             // Fade finished — clear points so the path won't redraw,
             // then reset HUD text to placeholder.
             tracker.clearPoints()
+            isTouchActive?.value = false
             effectiveHudText?.value = HUD_DEFAULT
         }
     }
@@ -228,21 +235,23 @@ fun PathOverlay(
                 }
             }
 
-            if (overlayConfig.showCrosshair) {
+            val shouldShowCrosshair =
+                overlayConfig.showCrosshair && (isTouchActive?.value ?: (fadeStartMillis?.value == null))
+            if (shouldShowCrosshair) {
                 val p = points.last()
                 drawLine(
-                    color = style.gradientEndColor.toComposeColor(),
+                    color = CROSSHAIR_COLOR_ARGB.toComposeColor(),
                     start = Offset(0f, p.y),
                     end = Offset(size.width, p.y),
-                    strokeWidth = 2f,
-                    alpha = alpha * 0.7f,
+                    strokeWidth = 4f,
+                    alpha = 1f,
                 )
                 drawLine(
-                    color = style.gradientEndColor.toComposeColor(),
+                    color = CROSSHAIR_COLOR_ARGB.toComposeColor(),
                     start = Offset(p.x, 0f),
                     end = Offset(p.x, size.height),
-                    strokeWidth = 2f,
-                    alpha = alpha * 0.7f,
+                    strokeWidth = 4f,
+                    alpha = 1f,
                 )
             }
 

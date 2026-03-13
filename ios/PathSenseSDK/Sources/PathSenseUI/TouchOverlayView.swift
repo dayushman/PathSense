@@ -12,12 +12,14 @@ final class TouchOverlayView: UIView {
     private var startPoint: CGPoint?
     private var drawingOpacity: Float = 1.0
     private var displayLink: CADisplayLink?
+    private var isTouchActive = false
 
     // Bounding box cache — recomputed only when tracker's pointsVersion changes
     private var cachedBoundingBox: CGRect?
     private var cachedBboxVersion: Int32 = -1
 
     private static let hudDefaultText = "x: \u{2013}  y: \u{2013}  dx: \u{2013}  dy: \u{2013}"
+    private static let crosshairColor = UIColor(red: 1, green: 0, blue: 1, alpha: 1)
 
     // ---- HUD label (matches Android PathOverlayView's hudLabel) ----
     private let hudLabel: UILabel = {
@@ -100,6 +102,7 @@ final class TouchOverlayView: UIView {
     // MARK: - Touch lifecycle helpers
 
     func notifyTouchStart(at point: CGPoint) {
+        isTouchActive = true
         startPoint = point
         cachedBoundingBox = nil
         cachedBboxVersion = -1
@@ -109,11 +112,13 @@ final class TouchOverlayView: UIView {
     }
 
     func notifyTouchMove(to point: CGPoint) {
+        isTouchActive = true
         updateHudText(current: point)
         setNeedsDisplay()
     }
 
     func notifyTouchEnd(at point: CGPoint) {
+        isTouchActive = false
         updateHudText(current: point)
         startFadeIfNeeded()
         setNeedsDisplay()
@@ -123,6 +128,7 @@ final class TouchOverlayView: UIView {
         displayLink?.invalidate()
         displayLink = nil
         tracker.clearPoints()
+        isTouchActive = false
         fadeStart = nil
         drawingOpacity = 1.0
         startPoint = nil
@@ -164,6 +170,7 @@ final class TouchOverlayView: UIView {
             displayLink?.invalidate()
             displayLink = nil
             tracker.clearPoints()
+            isTouchActive = false
             startPoint = nil
             hudLabel.text = Self.hudDefaultText
             setNeedsLayout()
@@ -187,6 +194,7 @@ final class TouchOverlayView: UIView {
         displayLink?.invalidate()
         displayLink = nil
         tracker.clearPoints()
+        isTouchActive = false
         fadeStart = nil
         drawingOpacity = 1.0
         startPoint = nil
@@ -265,14 +273,14 @@ final class TouchOverlayView: UIView {
             ctx.restoreGState()
         }
 
-        // --- Crosshair (2pt stroke, ~63% alpha, matching Android) ---
-        if overlayConfig.showCrosshair, let last = points.last {
+        // --- Crosshair (2pt stroke, #FF00FF) ---
+        if overlayConfig.showCrosshair, isTouchActive, let last = points.last {
             let crosshairPath = UIBezierPath()
             crosshairPath.move(to: CGPoint(x: 0, y: CGFloat(last.y)))
             crosshairPath.addLine(to: CGPoint(x: bounds.width, y: CGFloat(last.y)))
             crosshairPath.move(to: CGPoint(x: CGFloat(last.x), y: 0))
             crosshairPath.addLine(to: CGPoint(x: CGFloat(last.x), y: bounds.height))
-            overlayConfig.style.gradientEndUIColor.withAlphaComponent(0.63).setStroke()
+            Self.crosshairColor.setStroke()
             crosshairPath.lineWidth = 2.0
             crosshairPath.stroke()
         }

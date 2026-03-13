@@ -114,15 +114,8 @@ Use it in your scene/window bootstrap and keep release builds on plain `UIWindow
 ### UIKit / SceneDelegate
 
 ```swift
-var config = PathSenseConfig()
-config.overlayConfig.debugOnly = false
-config.overlayConfig.showCrosshair = true
-config.overlayConfig.showCoordinateHUD = true
-config.overlayConfig.style.strokeWidthPx = 6.0
-config.listener = { event in print("PathSense: \(event)") }
-
 #if DEBUG
-let window = PathSenseTrackingWindow(windowScene: windowScene, config: config)
+let window = PathSenseTrackingWindow(windowScene: windowScene)
 #else
 let window = UIWindow(windowScene: windowScene)
 #endif

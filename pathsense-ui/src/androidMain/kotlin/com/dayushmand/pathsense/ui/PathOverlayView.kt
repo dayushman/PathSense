@@ -53,7 +53,7 @@ class PathOverlayView @JvmOverloads constructor(
     }
     private val crossPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2f
+        strokeWidth = 4f
     }
     private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -76,11 +76,13 @@ class PathOverlayView @JvmOverloads constructor(
     private var cachedBoundingBox: AndroidRectF? = null
     private var cachedBboxVersion: Int = -1
 
+    private var isTouchActive: Boolean = false
     private var fadeStartTime: Long? = null
     private var startPoint: PathPoint? = null
     private val handler = Handler(Looper.getMainLooper())
     private val resetHudRunnable = Runnable {
         tracker?.clearPoints()
+        isTouchActive = false
         startPoint = null
         fadeStartTime = null
         hudLabel.text = HUD_DEFAULT
@@ -169,6 +171,7 @@ class PathOverlayView @JvmOverloads constructor(
     /** Called by the touch interceptor when a new touch starts. */
     fun notifyTouchStart(point: PathPoint) {
         handler.removeCallbacks(resetHudRunnable)
+        isTouchActive = true
         startPoint = point
         fadeStartTime = null
         cachedGradient = null
@@ -184,12 +187,14 @@ class PathOverlayView @JvmOverloads constructor(
 
     /** Called by the touch interceptor on each touch move. */
     fun notifyTouchMove(point: PathPoint) {
+        isTouchActive = true
         updateHudText(point)
         invalidate()
     }
 
     /** Called by the touch interceptor when the touch ends. */
     fun notifyTouchEnd(point: PathPoint) {
+        isTouchActive = false
         updateHudText(point)
         val fadeMs = overlayConfig.style.fadeOutMs
         if (fadeMs > 0) {
@@ -204,6 +209,7 @@ class PathOverlayView @JvmOverloads constructor(
     /** Called by the touch interceptor on cancel. */
     fun notifyTouchCancel() {
         handler.removeCallbacks(resetHudRunnable)
+        isTouchActive = false
         startPoint = null
         hudLabel.text = HUD_DEFAULT
         invalidate()
@@ -212,6 +218,7 @@ class PathOverlayView @JvmOverloads constructor(
     fun clearCanvas() {
         handler.removeCallbacks(resetHudRunnable)
         tracker?.clearPoints()
+        isTouchActive = false
         fadeStartTime = null
         startPoint = null
         cachedGradient = null
@@ -312,8 +319,8 @@ class PathOverlayView @JvmOverloads constructor(
             canvas.drawRect(bbox, boxPaint)
         }
 
-        if (overlayConfig.showCrosshair) {
-            drawCrosshair(canvas, end, fadeAlpha)
+        if (overlayConfig.showCrosshair && isTouchActive) {
+            drawCrosshair(canvas, end)
         }
 
         if (overlayConfig.showTouchCircle) {
@@ -350,9 +357,9 @@ class PathOverlayView @JvmOverloads constructor(
         outPath.lineTo(last.x, last.y)
     }
 
-    private fun drawCrosshair(canvas: Canvas, point: PathPoint, alpha: Float) {
-        crossPaint.color = overlayConfig.style.gradientEndColor.toColorInt()
-        crossPaint.alpha = (alpha * 160).toInt().coerceIn(0, 255)
+    private fun drawCrosshair(canvas: Canvas, point: PathPoint) {
+        crossPaint.color = CROSSHAIR_COLOR_ARGB.toColorInt()
+        crossPaint.alpha = 255
         canvas.drawLine(0f, point.y, width.toFloat(), point.y, crossPaint)
         canvas.drawLine(point.x, 0f, point.x, height.toFloat(), crossPaint)
     }
@@ -382,6 +389,7 @@ class PathOverlayView @JvmOverloads constructor(
     }
 
     companion object {
+        private const val CROSSHAIR_COLOR_ARGB: Long = 0xFFFF00FF
         internal const val HUD_DEFAULT = "x: \u2013  y: \u2013  dx: \u2013  dy: \u2013"
     }
 }
