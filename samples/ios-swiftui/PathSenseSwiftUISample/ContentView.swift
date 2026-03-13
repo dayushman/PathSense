@@ -1,47 +1,48 @@
-import PathSenseUI
 import SwiftUI
+import UIKit
+#if DEBUG
+import PathSenseUI
+#endif
 
 struct ContentView: View {
-    @State private var pathSenseAction = PathSenseAction()
-
     var body: some View {
-        PathSenseOverlay(config: makeConfig(), action: $pathSenseAction) {
-            ZStack {
-                Color(.systemBackground)
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
-                Text("Draw anywhere on screen")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            Text("Draw anywhere on screen")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
-                VStack {
+            VStack {
+                Spacer()
+                HStack {
                     Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            pathSenseAction.clearCanvas()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.blue)
-                                .clipShape(Circle())
-                        }
-                        .padding(.trailing, 24)
-                        .padding(.bottom, 24)
+                    Button(action: clearPathIfPossible) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.blue)
+                            .clipShape(Circle())
                     }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 24)
                 }
             }
         }
     }
 
-    private func makeConfig() -> PathSenseConfig {
-        var config = PathSenseConfig()
-        config.overlayConfig.debugOnly = false
-        config.overlayConfig.showCoordinateHUD = true
-        return config
+    private func clearPathIfPossible() {
+        #if DEBUG
+            guard
+                let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let window = scene.windows.first(where: { $0.isKeyWindow }) as? PathSenseTrackingWindow
+            else { return }
+            window.clearCanvas()
+        #endif
     }
 }

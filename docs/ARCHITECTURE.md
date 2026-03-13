@@ -13,9 +13,9 @@
                     │ depends on
 ┌───────────────────▼───────────────────────────┐
 │                 pathsense-ui                  │   ← Opt-in rendering
-│  PathSense.init() / PathSense.configure()     │
+│  PathSense.init() / PathSenseTrackingWindow   │
 │  Android: PathOverlayView · PathCaptureView   │
-│  iOS: PathTrackingWindow · TouchOverlayView   │
+│  iOS: PathSenseTrackingWindow · TouchOverlayView   │
 │  androidMain / iosMain (Swift)                │
 └───────────────────────────────────────────────┘
 ```
@@ -23,7 +23,7 @@
 | Module            | Artifact                                  | Description                                                                                      |
 | ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `:pathsense-core` | `com.dayushmand.pathsense:pathsense-core` | Path tracking, smoothing, metrics, gesture recognition, **shared config types**. No UI.          |
-| `:pathsense-ui`   | `com.dayushmand.pathsense:pathsense-ui`   | Rendering overlays, zero-config auto-attach: `PathSense.init()` (Android) / `.configure()` (iOS) |
+| `:pathsense-ui`   | `com.dayushmand.pathsense:pathsense-ui`   | Rendering overlays: `PathSense.init()` auto-attach on Android, explicit `PathSenseTrackingWindow` on iOS |
 
 ---
 
@@ -93,7 +93,7 @@ Built-in templates: **Line**, **Circle**, **Rectangle**, **Zigzag**.
 - **Zero touch-to-pixel latency**: Smoothing runs inline on the main thread; the renderer reads smoothed points directly. All heavy computation (resampling, metrics, recognition) runs on `Dispatchers.Default` and never blocks rendering.
 - **Non-intrusive overlays**: Overlay views are transparent to touch events (`isUserInteractionEnabled = false` / `clickable = false`); the app functions normally.
 - **Rendering is opt-in**: Consumers add `:pathsense-ui` only if they want visual overlays. The core module works standalone.
-- **Runtime enable/disable**: Two-level control — `PathTracker.captureEnabled` for per-instance gating (in core, no UI dependency), and `PathSense.disable()` / `PathSense.enable()` for global toggle (in UI module). Disabling mid-gesture auto-cancels the session and clears all overlays immediately. The core-level guard ensures all integration paths (auto-attach, manual views, Compose) are covered. UI-layer guards are an additional optimization to avoid unnecessary touch processing overhead.
+- **Runtime enable/disable**: `PathTracker.captureEnabled` enables per-instance gating in core. Android also exposes global `PathSense.disable()` / `PathSense.enable()`, while iOS uses per-window `PathSenseTrackingWindow.isCaptureEnabled`. Disabling mid-gesture cancels the active session and clears overlays.
 
 ---
 

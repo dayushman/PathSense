@@ -3,6 +3,6 @@ import PathSenseUI
 
 final class PathSenseUITests: XCTestCase {
     func testPlaceholder() {
-        // TODO: Add snapshot tests for PathSenseContainerView and overlays.
+        // TODO: Add snapshot/integration tests for PathSenseTrackingWindow + TouchOverlayView.
     }
 }

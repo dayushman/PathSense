@@ -136,11 +136,15 @@ config.listener = { event in /* ... */ }
 
 ## iOS Entry Points
 
-| API                                | Description                                |
-| ---------------------------------- | ------------------------------------------ |
-| `PathSense.configure()`            | Zero-config auto-attach to all UIWindows    |
-| `PathSense.configure(config)`      | Auto-attach with custom config              |
-| `PathSense.tracker(for: window)`   | Retrieve the `PathTracker` for a UIWindow   |
+| API | Description |
+| --- | --- |
+| `PathSenseTrackingWindow(windowScene:config:)` | Create a tracking window for SceneDelegate-based apps |
+| `PathSenseTrackingWindow(window:config:)` | Promote an existing window into a tracking window |
+| `window.tracker` | Access the `PathTracker` for that specific window |
+| `window.isCaptureEnabled` | Enable/disable capture for that window instance |
+| `window.clearCanvas()` | Clear rendered paths for that window instance |
+
+> iOS tracking window APIs are compiled only in `#if DEBUG`.
 
 ---
 
@@ -164,11 +168,8 @@ config.listener = { event in /* ... */ }
 
 #### iOS
 
-| API                    | Description                                                     |
-| ---------------------- | --------------------------------------------------------------- |
-| `PathSense.isEnabled`  | Read-only — whether capture is currently enabled                 |
-| `PathSense.disable()`  | Disable capture + cancel sessions + clear overlays immediately   |
-| `PathSense.enable()`   | Enable capture — new gestures processed from next touch          |
+No global toggle is exposed on iOS. Use per-window controls on
+`PathSenseTrackingWindow` instead.
 
 ### Usage
 
@@ -192,18 +193,13 @@ tracker?.captureEnabled = false
 **iOS:**
 
 ```swift
-// Disable globally
-PathSense.disable()
-
-// Re-enable
-PathSense.enable()
-
-// Check state
-if PathSense.isEnabled { /* tracking active */ }
-
-// Per-tracker (advanced)
-let tracker = PathSense.tracker(for: window)
-tracker?.captureEnabled = false
+#if DEBUG
+let window = PathSenseTrackingWindow(windowScene: windowScene, config: config)
+window.isCaptureEnabled = false
+window.clearCanvas()
+let tracker = window.tracker
+tracker.captureEnabled = true
+#endif
 ```
 
 ---
@@ -220,6 +216,5 @@ For cases where you need direct control over the overlay or capture view:
 
 ### iOS
 
-- `PathTrackingWindow` — `UIWindow` subclass that intercepts touches
+- `PathSenseTrackingWindow` — `UIWindow` subclass that intercepts touches
 - `TouchOverlayView` — transparent `UIView` overlay
-- `PathCaptureView` / `PathCaptureRepresentable` — manual `UIView` / SwiftUI wrapper

@@ -1,6 +1,6 @@
 # PathSenseSDK
 
-A **Kotlin Multiplatform** gesture SDK for **Android** (View + Compose) and **iOS** (UIKit + SwiftUI). One-line setup — touch-path capture, real-time smoothing, metrics, gesture recognition, and visual overlays out of the box.
+A **Kotlin Multiplatform** gesture SDK for **Android** (View + Compose) and **iOS** (UIKit + SwiftUI). Touch-path capture, real-time smoothing, metrics, gesture recognition, and visual overlays out of the box.
 
 All configuration types (`PathOverlayConfig`, `PathStyle`, `HUDAlignment`, `StrokeCap`) are defined once in `pathsense-core` and shared across both platforms — Android uses them directly via Gradle, iOS consumes them through the `PathSenseCore.xcframework`.
 
@@ -8,7 +8,7 @@ All configuration types (`PathOverlayConfig`, `PathStyle`, `HUDAlignment`, `Stro
 
 ## Features
 
-- **One-line integration** — auto-attaches to all Activities / UIWindows
+- **Integration ready** — auto-attaches on Android, explicit tracking window on iOS
 - **Gesture recognition** — Line, Circle, Rectangle, Zigzag ($1 Unistroke Recognizer)
 - **Real-time metrics** — path length, bounding box, direction, speed, deltas
 - **Visual overlays** — gradient trail, crosshair, touch circle, coordinate HUD
@@ -108,66 +108,38 @@ PathSense.init(this, PathSenseConfig(
 
 ## Quick Start — iOS
 
-### SwiftUI
+`PathSenseTrackingWindow` is a debug-only (`#if DEBUG`) `UIWindow` subclass.
+Use it in your scene/window bootstrap and keep release builds on plain `UIWindow`.
 
-```swift
-import PathSenseUI
-
-@main
-struct MyApp: App {
-    init() {
-        PathSense.configure()
-    }
-
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
-```
-
-### UIKit
-
-```swift
-import PathSenseUI
-
-@main
-class AppDelegate: UIResponder, UIApplicationDelegate {
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-    ) -> Bool {
-        PathSense.configure()
-        return true
-    }
-}
-```
-
-Done. The SDK intercepts touches on every `UIWindow`, tracks paths, recognizes gestures, and renders a gradient overlay. No view hierarchy changes needed.
-
-**Enable / Disable:**
-
-```swift
-// Disable path capture
-PathSense.disable()   // stops tracking + clears overlays
-
-// Re-enable
-PathSense.enable()    // resumes from next gesture
-```
-
-**Customize:**
+### UIKit / SceneDelegate
 
 ```swift
 var config = PathSenseConfig()
+config.overlayConfig.debugOnly = false
 config.overlayConfig.showCrosshair = true
 config.overlayConfig.showCoordinateHUD = true
 config.overlayConfig.style.strokeWidthPx = 6.0
 config.listener = { event in print("PathSense: \(event)") }
-PathSense.configure(config)
+
+#if DEBUG
+let window = PathSenseTrackingWindow(windowScene: windowScene, config: config)
+#else
+let window = UIWindow(windowScene: windowScene)
+#endif
+
+window.rootViewController = ViewController()
+window.makeKeyAndVisible()
 ```
 
 > **Note:** On iOS, colour properties (e.g. `gradientStartColor`, `hudTextColor`) are `Int64` ARGB values from the shared Kotlin module. The `PathSenseUI` Swift package provides UIKit convenience extensions like `.gradientStartUIColor`, `.hudUITextColor` etc. for converting to `UIColor` when needed.
+
+**Runtime controls (Debug window instance):**
+
+```swift
+window.isCaptureEnabled = false
+window.clearCanvas()
+let tracker = window.tracker
+```
 
 ---
 
@@ -177,8 +149,8 @@ PathSense.configure(config)
 | ------------------------- | -------- | ---------------------------------------------------------------- |
 | `samples/android-compose` | Android  | `PathSense.init(this, config)` in `Application.onCreate()`      |
 | `samples/android-view`    | Android  | `PathSense.init(this, config)` in `Application.onCreate()`      |
-| `samples/ios-swiftui`     | iOS      | `PathSense.configure(config)` in `App.init()`                   |
-| `samples/ios-uikit`       | iOS      | `PathSense.configure(config)` in `didFinishLaunchingWithOptions` |
+| `samples/ios-swiftui`     | iOS      | `PathSenseTrackingWindow(...)` in `SceneDelegate`               |
+| `samples/ios-uikit`       | iOS      | `PathSenseTrackingWindow(...)` in `SceneDelegate`               |
 
 ---
 

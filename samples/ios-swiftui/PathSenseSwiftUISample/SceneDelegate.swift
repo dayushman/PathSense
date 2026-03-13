@@ -1,10 +1,10 @@
+import SwiftUI
 import UIKit
 #if DEBUG
 import PathSenseUI
 #endif
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-
     var window: UIWindow?
 
     func scene(
@@ -22,7 +22,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         #else
             let window = UIWindow(windowScene: windowScene)
         #endif
-        window.rootViewController = ViewController()
+
+        window.rootViewController = UIHostingController(rootView: ContentView())
         window.makeKeyAndVisible()
         self.window = window
     }

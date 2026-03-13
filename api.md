@@ -53,7 +53,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
 - Coordinate HUD displays: live `(x, y)` position and `(dx, dy)` delta from last point
 - `fun clearCanvas()` — programmatically clear all rendered paths and overlays
 - `PathSense.disable()` / `PathSense.enable()` / `PathSense.isEnabled` (Android) — globally disable/enable path capture; `disable()` clears overlays immediately
-- `PathSense.disable()` / `PathSense.enable()` / `PathSense.isEnabled` (iOS) — globally disable/enable path capture; `disable()` clears overlays immediately
+- `PathSenseTrackingWindow.isCaptureEnabled` / `PathSenseTrackingWindow.clearCanvas()` / `PathSenseTrackingWindow.tracker` (iOS) — per-window controls for capture, clear, and tracker access
 
 ## Architecture / Modules
 
@@ -80,12 +80,11 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - Compose `@Composable PathCapture / PathOverlay` — available for advanced manual integration if needed
   - `PathCaptureView : FrameLayout` — available for advanced manual integration if needed
 - **iOS UI (Swift sources in SPM)**
-  - `PathSense.configure(config)` — zero-config entry point mirroring Android; swizzles `UIWindow.sendEvent(_:)` to intercept touches, auto-attaches `TouchOverlayView` to every window, and auto-creates a `PathTracker` per window. Works with both UIKit and SwiftUI apps — no view hierarchy changes needed.
+  - `PathSenseTrackingWindow(config)` — explicit `UIWindow`-based entry point; overrides `sendEvent(_:)`, tracks first direct touch, and forwards points into KMM `PathTracker`
     - `PathSenseConfig(overlayConfig, listener)` — configuration struct (iOS equivalent of Android `PathSenseConfig`)
-    - `PathSense.tracker(for: window)` — retrieve the `PathTracker` for a given window
-  - `TouchOverlayView : UIView` — transparent overlay (gradient trail, crosshair, touch circle, bounding box, coordinate HUD) used internally by auto-attach and `PathTrackingWindow`
-  - `PathTrackingWindow : UIWindow` — available for advanced manual integration (UIKit window subclass)
-  - `PathCaptureView : UIView` / `PathCaptureRepresentable` — available for advanced manual integration
+    - `window.tracker` — retrieve the `PathTracker` for the specific window
+    - `window.isCaptureEnabled` / `window.clearCanvas()` — per-window runtime controls
+  - `TouchOverlayView : UIView` — transparent overlay (gradient trail, crosshair, touch circle, bounding box, coordinate HUD) used internally by `PathSenseTrackingWindow`
 - **Rendering features (both platforms)**
   - **Gradient trail**: smooth color gradient from `gradientStartColor` → `gradientEndColor` following the path
   - **Crosshair lines**: full-screen horizontal + vertical lines tracking current touch position
@@ -106,7 +105,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - Consumers add only the targets they need; `PathSenseUI` depends on `PathSenseCore`
 - **Debug-only scope** — applies only to the rendering module (`:pathsdk-ui`):
   - Android: `if (!BuildConfig.DEBUG && overlayConfig.debugOnly) { no-op }`
-  - iOS: `#if DEBUG` wrappers around window/overlay code + runtime `PathSenseUI.isEnabled`
+  - iOS: `#if DEBUG` wrappers around tracking-window/overlay code
 - Core module (`:pathsdk-core`) is **always active** — metrics and recognition are production features, not debug tools.
 
 ## Key Behaviors
@@ -118,14 +117,13 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - **Background thread (`Dispatchers.Default`):** resampling → metrics computation → gesture recognition → post `MetricsUpdated` / `MetricsEnded` / `GestureRecognized` back to main. Metrics arrive ~1 frame after the corresponding `Updated` event; this latency is imperceptible to consumers.
 - **Memory bounded**: point buffer capped at `maxPoints` (default 500); oldest points evicted via ring buffer so long gestures never cause unbounded growth.
 - **Headless-first**: `PathTracker` has zero UI dependencies; it can be used in services, tests, or background processing without any View.
-- **Rendering is opt-in**: consumers add `:pathsdk-ui` only if they want visual overlays. Primary integration on both platforms is **auto-attach**:
+- **Rendering is opt-in**: consumers add `:pathsdk-ui` only if they want visual overlays.
   - **Android**: `PathSense.init(app)` — one-liner in `Application.onCreate()`; auto-attaches to every Activity via `ActivityLifecycleCallbacks`
-  - **iOS**: `PathSense.configure()` — one-liner in `App.init()` or `didFinishLaunchingWithOptions:`; swizzles `UIWindow.sendEvent(_:)` to automatically intercept touches and add an overlay to every window
-  - Manual integration APIs (`PathCaptureView`, Compose `PathCapture`, `PathTrackingWindow`) remain available for advanced use cases
+  - **iOS**: create `PathSenseTrackingWindow` in `SceneDelegate` (debug builds), and use plain `UIWindow` in release
 - **Zero touch-to-pixel latency**: the renderer reads smoothed points directly from the main-thread buffer — no waiting for background work. Resampling, metrics, and recognition never block drawing.
 - **Recognition algorithm**: built-in recognizers use the **$1 Unistroke Recognizer** (resampling to 64 points, rotating to indicative angle, scaling to unit square, matching against templates via cosine distance). `GestureMatch.score` = 1 − (distance / half-diagonal of unit square), range 0.0–1.0. Default threshold: 0.75.
 - Non-intrusive: overlay views are transparent to touch events (`isUserInteractionEnabled = false` / `clickable = false`); app functions normally.
-- **Runtime enable/disable**: `PathSense.disable()` pauses all touch tracking, cancels in-flight sessions, and clears overlays immediately. `PathSense.enable()` resumes. Per-tracker control available via `PathTracker.captureEnabled`.
+- **Runtime enable/disable**: Android exposes global `PathSense.disable()/enable()`. iOS uses per-window controls via `PathSenseTrackingWindow.isCaptureEnabled`, with per-tracker control still available via `PathTracker.captureEnabled`.
 - All `PathEvent` callbacks delivered on main thread. Background pipeline posts results via platform main dispatcher (`Dispatchers.Main` / `DispatchQueue.main`).
 
 ## Tests
@@ -148,8 +146,8 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - Headless `PathTracker` (no UI) produces correct events and metrics.
 - iOS
   - Unit tests for Swift wrappers' delegate wiring.
-  - `PathTrackingWindow` intercepts touch via `sendEvent(_:)` and emits correct events without modifying view hierarchy.
-  - Snapshot test: `PathCaptureView` layer renders a visible gradient stroke after simulated touches.
+  - `PathSenseTrackingWindow` intercepts touch via `sendEvent(_:)` and emits correct events without modifying view hierarchy.
+  - Snapshot test: `TouchOverlayView` layer renders a visible gradient stroke after simulated touches.
   - Snapshot test: crosshair lines and touch circle visible at correct coordinates.
   - Coordinate HUD displays correct `(x, y)` and `(dx, dy)` values.
 
@@ -162,6 +160,6 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
 - Point buffer default cap: 500 points (configurable via `maxPoints`).
 - Rendering is a separate opt-in module; core SDK has zero UI framework dependencies.
 - iOS distribution via SPM (not CocoaPods); XCFramework for the KMM binary, pure Swift for UI adapters.
-- Both Android and iOS use auto-attach as the primary integration; manual APIs available for advanced use cases.
+- Android uses auto-attach, while iOS uses explicit `PathSenseTrackingWindow` integration.
 - All GesturePathKit visualization features included: gradient trail, crosshair lines, touch circle, coordinate HUD with 6 alignment options.
 - Repo is currently empty; we will scaffold from scratch.

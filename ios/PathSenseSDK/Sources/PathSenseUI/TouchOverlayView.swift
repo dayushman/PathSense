@@ -1,3 +1,4 @@
+#if DEBUG
 import PathSenseCore
 import UIKit
 
@@ -313,3 +314,4 @@ final class TouchOverlayView: UIView {
         }
     }
 }
+#endif
