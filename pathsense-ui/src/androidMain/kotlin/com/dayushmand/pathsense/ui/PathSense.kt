@@ -75,6 +75,7 @@ object PathSense {
         allAttachments().forEach { attachment ->
             attachment.tracker.captureEnabled = false
             attachment.overlay.clearCanvas()
+            attachment.overlay.visibility = View.GONE
         }
         gestureAttachment = null
     }
@@ -90,6 +91,7 @@ object PathSense {
         allAttachments().forEach { attachment ->
             attachment.tracker.captureEnabled = true
         }
+        syncAndRefreshOverlays()
     }
 
     /**
