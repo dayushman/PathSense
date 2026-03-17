@@ -46,7 +46,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - `gradientEndColor: Long = 0xFF007AFF` (blue)
   - `strokeWidthPx: Float = 4f`
   - `strokeCap: StrokeCap = ROUND`
-  - `fadeOutMs: Long = 300` — path fades out over this duration after finger lifts (0 = stays until cleared)
+  - `fadeOutMs: Long = 300` — compatibility field; current SDK overlays clear immediately after finger lifts/cancel
   - `showBoundingBox: Boolean = false`
   - `boundingBoxColor: Long = 0x4400FF00`
 - `HUDAlignment`: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`, `CENTER_LEFT`, `CENTER_RIGHT`
@@ -92,7 +92,7 @@ Build a Kotlin Multiplatform SDK split into two layers: a **headless core** (`:p
   - **Coordinate HUD**: live `(x, y)` + `(dx, dy)` label, configurable position (6 alignment options)
   - Drawing uses the smoothed (not raw) points for a visually clean stroke
   - Quadratic Bézier interpolation between consecutive points for smooth curves
-  - Fade-out animation after `onUp` when `fadeOutMs > 0` (default 300ms)
+  - Overlay visuals clear immediately after `onUp` / cancel (no fade animation)
   - `clearCanvas()` removes all drawn paths / overlays and resets internal buffers
   - Memory bounded: trail rendering capped at `maxPoints` (inherited from core config)
 

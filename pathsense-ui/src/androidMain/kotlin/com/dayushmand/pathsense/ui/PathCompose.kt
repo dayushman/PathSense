@@ -21,25 +21,21 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.dayushmand.pathsense.core.HUDAlignment
 import com.dayushmand.pathsense.core.PathOverlayConfig
 import com.dayushmand.pathsense.core.PathPoint
-import com.dayushmand.pathsense.core.PathStyle
 import com.dayushmand.pathsense.core.PathTracker
 import com.dayushmand.pathsense.core.StrokeCap
-import kotlinx.coroutines.delay
 import kotlin.math.max
 
-private const val HUD_DEFAULT = "x: \u2013  y: \u2013  dx: \u2013  dy: \u2013"
 private const val TAP_DISTANCE_THRESHOLD = 1.0
-private const val CROSSHAIR_COLOR_ARGB: Long = 0xFFFF00FF
 
 @Composable
 fun PathCapture(
@@ -48,10 +44,9 @@ fun PathCapture(
     overlayConfig: PathOverlayConfig = PathOverlayConfig(),
     onEvent: ((com.dayushmand.pathsense.core.PathEvent) -> Unit)? = null,
 ) {
-    val fadeStart = remember { mutableStateOf<Long?>(null) }
     val isTouchActive = remember { mutableStateOf(false) }
     val startPoint = remember { mutableStateOf<PathPoint?>(null) }
-    val hudText = remember { mutableStateOf(HUD_DEFAULT) }
+    val hudText = remember { mutableStateOf(PathOverlayView.HUD_DEFAULT) }
 
     LaunchedEffect(onEvent) {
         if (onEvent != null) {
@@ -64,7 +59,6 @@ fun PathCapture(
             awaitEachGesture {
                 if (!tracker.captureEnabled) return@awaitEachGesture
                 val down = awaitFirstDown()
-                fadeStart.value = null
                 isTouchActive.value = true
                 val downPoint = down.position.toPoint()
                 startPoint.value = downPoint
@@ -76,11 +70,14 @@ fun PathCapture(
                     val event = awaitPointerEvent()
                     val change = event.changes.firstOrNull { it.id == down.id } ?: continue
                     if (change.changedToUp()) {
-                        val upPoint = change.position.toPoint()
-                        tracker.onUp(upPoint)
-                        isTouchActive.value = false
-                        hudText.value = formatHud(upPoint, startPoint.value ?: upPoint)
-                        fadeStart.value = SystemClock.uptimeMillis()
+                        tracker.onUp(change.position.toPoint())
+                        resetCapture(tracker, isTouchActive, startPoint, hudText)
+                        change.consume()
+                        done = true
+                    } else if (!change.pressed) {
+                        tracker.onCancel()
+                        resetCapture(tracker, isTouchActive, startPoint, hudText)
+                        change.consume()
                         done = true
                     } else {
                         val movePoint = change.position.toPoint()
@@ -92,7 +89,6 @@ fun PathCapture(
         },
         tracker = tracker,
         overlayConfig = overlayConfig,
-        fadeStartMillis = fadeStart,
         isTouchActive = isTouchActive,
         hudText = hudText,
     )
@@ -103,16 +99,12 @@ fun PathOverlay(
     modifier: Modifier = Modifier,
     tracker: PathTracker,
     overlayConfig: PathOverlayConfig = PathOverlayConfig(),
-    fadeStartMillis: MutableState<Long?>? = null,
     isTouchActive: MutableState<Boolean>? = null,
     hudText: MutableState<String>? = null,
 ) {
-    val now = remember { mutableStateOf(SystemClock.uptimeMillis()) }
-    val fadeOutMs = overlayConfig.style.fadeOutMs
-
     // When no external hudText is provided, auto-derive from the tracker's events
     val effectiveHudText = hudText ?: if (overlayConfig.showCoordinateHUD) {
-        val autoHud = remember { mutableStateOf(HUD_DEFAULT) }
+        val autoHud = remember { mutableStateOf(PathOverlayView.HUD_DEFAULT) }
         val startPoint = remember { mutableStateOf<PathPoint?>(null) }
         DisposableEffect(tracker) {
             val previous = tracker.listener
@@ -137,7 +129,7 @@ fun PathOverlay(
                     }
                     is com.dayushmand.pathsense.core.PathEvent.Cancelled -> {
                         startPoint.value = null
-                        autoHud.value = HUD_DEFAULT
+                        autoHud.value = PathOverlayView.HUD_DEFAULT
                     }
                     else -> {}
                 }
@@ -149,33 +141,14 @@ fun PathOverlay(
         autoHud
     } else null
 
-    LaunchedEffect(fadeStartMillis?.value, fadeOutMs) {
-        val start = fadeStartMillis?.value
-        if (start != null && fadeOutMs > 0) {
-            while (true) {
-                now.value = SystemClock.uptimeMillis()
-                if (now.value - start > fadeOutMs) break
-                delay(16)
-            }
-            // Fade finished — clear points so the path won't redraw,
-            // then reset HUD text to placeholder.
-            tracker.clearPoints()
-            isTouchActive?.value = false
-            effectiveHudText?.value = HUD_DEFAULT
-        }
-    }
-
     val cachedPath = remember { Path() }
     val cachedVersion = remember { mutableStateOf(-1) }
 
-    Box(modifier = modifier) {
+    Box(modifier = modifier.zIndex(PathSense.OVERLAY_PRIORITY_Z)) {
         Canvas(modifier = Modifier.matchParentSize()) {
             if (!isDebugBuild() && overlayConfig.debugOnly) return@Canvas
             val points = tracker.currentPoints
             if (points.isEmpty()) return@Canvas
-
-            val alpha = computeFadeAlpha(fadeStartMillis?.value, now.value, fadeOutMs)
-            if (alpha <= 0f) return@Canvas
 
             val style = overlayConfig.style
             val start = points.first()
@@ -190,7 +163,7 @@ fun PathOverlay(
                     color = style.gradientStartColor.toComposeColor(),
                     radius = radius,
                     center = Offset(end.x, end.y),
-                    alpha = alpha,
+                    alpha = 1f,
                 )
             } else {
                 val path = cachedPath.apply {
@@ -209,7 +182,7 @@ fun PathOverlay(
                     path = path,
                     brush = brush,
                     style = Stroke(width = style.strokeWidthPx, cap = style.strokeCap.toComposeCap()),
-                    alpha = alpha,
+                    alpha = 1f,
                 )
             }
 
@@ -230,24 +203,24 @@ fun PathOverlay(
                         topLeft = Offset(minX, minY),
                         size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY),
                         style = Stroke(width = max(2f, style.strokeWidthPx / 2f)),
-                        alpha = alpha,
+                        alpha = 1f,
                     )
                 }
             }
 
             val shouldShowCrosshair =
-                overlayConfig.showCrosshair && (isTouchActive?.value ?: (fadeStartMillis?.value == null))
+                overlayConfig.showCrosshair && (isTouchActive?.value ?: true)
             if (shouldShowCrosshair) {
                 val p = points.last()
                 drawLine(
-                    color = CROSSHAIR_COLOR_ARGB.toComposeColor(),
+                    color = PathOverlayView.CROSSHAIR_COLOR.toComposeColor(),
                     start = Offset(0f, p.y),
                     end = Offset(size.width, p.y),
                     strokeWidth = 4f,
                     alpha = 1f,
                 )
                 drawLine(
-                    color = CROSSHAIR_COLOR_ARGB.toComposeColor(),
+                    color = PathOverlayView.CROSSHAIR_COLOR.toComposeColor(),
                     start = Offset(p.x, 0f),
                     end = Offset(p.x, size.height),
                     strokeWidth = 4f,
@@ -262,7 +235,7 @@ fun PathOverlay(
                     color = style.gradientStartColor.toComposeColor(),
                     radius = radius,
                     center = Offset(p.x, p.y),
-                    alpha = alpha * 0.8f,
+                    alpha = 0.8f,
                     style = Stroke(width = 3f),
                 )
             }
@@ -278,13 +251,11 @@ fun PathOverlay(
                 HUDAlignment.CENTER_LEFT -> Alignment.CenterStart
                 HUDAlignment.CENTER_RIGHT -> Alignment.CenterEnd
             }
-            val hudAlpha = computeFadeAlpha(fadeStartMillis?.value, now.value, fadeOutMs)
             BasicText(
-                text = effectiveHudText?.value ?: HUD_DEFAULT,
+                text = effectiveHudText?.value ?: PathOverlayView.HUD_DEFAULT,
                 modifier = Modifier
                     .align(alignment)
                     .padding(12.dp)
-                    .graphicsLayer { alpha = hudAlpha }
                     .background(
                         overlayConfig.hudBackgroundColor.toComposeColor(),
                         RoundedCornerShape(8.dp),
@@ -298,6 +269,18 @@ fun PathOverlay(
             )
         }
     }
+}
+
+private fun resetCapture(
+    tracker: PathTracker,
+    isTouchActive: MutableState<Boolean>,
+    startPoint: MutableState<PathPoint?>,
+    hudText: MutableState<String>,
+) {
+    isTouchActive.value = false
+    tracker.clearPoints()
+    startPoint.value = null
+    hudText.value = PathOverlayView.HUD_DEFAULT
 }
 
 private fun buildComposePathInto(path: Path, points: List<PathPoint>) {
@@ -316,13 +299,6 @@ private fun buildComposePathInto(path: Path, points: List<PathPoint>) {
 
 private fun Offset.toPoint(): PathPoint {
     return PathPoint(x, y, SystemClock.uptimeMillis())
-}
-
-private fun computeFadeAlpha(start: Long?, now: Long, fadeOutMs: Long): Float {
-    if (start == null || fadeOutMs <= 0) return 1f
-    val elapsed = (now - start).coerceAtLeast(0)
-    val t = elapsed.toFloat() / fadeOutMs.toFloat()
-    return (1f - t).coerceIn(0f, 1f)
 }
 
 private fun formatHud(current: PathPoint, start: PathPoint): String {

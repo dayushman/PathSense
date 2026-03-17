@@ -15,6 +15,12 @@ public final class PathSenseTrackingWindow: UIWindow {
         didSet { overlayView.overlayConfig = overlayConfig }
     }
 
+    public override var rootViewController: UIViewController? {
+        didSet {
+            promoteOverlaySoon()
+        }
+    }
+
     /// When false, touch capture is paused and current overlay state is cleared.
     public var isCaptureEnabled: Bool = true {
         didSet {
@@ -81,18 +87,28 @@ public final class PathSenseTrackingWindow: UIWindow {
         overlayView.clearCanvas()
     }
 
-    public override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-        if view !== overlayView {
-            bringSubviewToFront(overlayView)
+    public override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        if subview !== overlayView {
+            promoteOverlaySoon()
         }
+    }
+
+    public override func makeKeyAndVisible() {
+        super.makeKeyAndVisible()
+        promoteOverlaySoon()
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        promoteOverlayIfNeeded()
     }
 
     public override func sendEvent(_ event: UIEvent) {
         super.sendEvent(event)
 
         guard isCaptureEnabled, tracker.captureEnabled else { return }
-        guard let touches = event.allTouches else { return }
+        guard event.type == .touches, let touches = event.allTouches else { return }
 
         for touch in touches where touch.type == .direct {
             switch touch.phase {
@@ -128,6 +144,7 @@ public final class PathSenseTrackingWindow: UIWindow {
         overlayView.isUserInteractionEnabled = false
         overlayView.backgroundColor = .clear
         addSubview(overlayView)
+        promoteOverlay()
     }
 
     private func cancelTrackedTouchIfNeeded() {
@@ -162,5 +179,31 @@ public final class PathSenseTrackingWindow: UIWindow {
             break
         }
     }
+
+    private var needsPromote = false
+
+    private func promoteOverlayIfNeeded() {
+        guard overlayView.superview === self,
+              subviews.last !== overlayView else { return }
+        promoteOverlay()
+    }
+
+    private func promoteOverlay() {
+        guard overlayView.superview === self else { return }
+        overlayView.layer.zPosition = Self.overlayPriorityZ
+        super.bringSubviewToFront(overlayView)
+    }
+
+    private func promoteOverlaySoon() {
+        guard !needsPromote else { return }
+        needsPromote = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.needsPromote = false
+            self.promoteOverlay()
+        }
+    }
+
+    private static let overlayPriorityZ: CGFloat = 10_000
 }
 #endif

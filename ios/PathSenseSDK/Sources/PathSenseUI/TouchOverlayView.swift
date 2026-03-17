@@ -8,10 +8,7 @@ final class TouchOverlayView: UIView {
         didSet { applyHudConfig() }
     }
 
-    private var fadeStart: Date?
     private var startPoint: CGPoint?
-    private var drawingOpacity: Float = 1.0
-    private var displayLink: CADisplayLink?
     private var isTouchActive = false
 
     // Bounding box cache — recomputed only when tracker's pointsVersion changes
@@ -19,19 +16,13 @@ final class TouchOverlayView: UIView {
     private var cachedBboxVersion: Int32 = -1
 
     private static let hudDefaultText = "x: \u{2013}  y: \u{2013}  dx: \u{2013}  dy: \u{2013}"
+    private static let hudFont = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+    private static let hudMaxSize: CGSize = "x: 0000  y: 0000  dx: -0000  dy: -0000"
+        .size(withAttributes: [.font: hudFont])
+    private static let hudCornerRadius: CGFloat = 8
     private static let crosshairColor = UIColor(red: 1, green: 0, blue: 1, alpha: 1)
 
-    // ---- HUD label (matches Android PathOverlayView's hudLabel) ----
-    private let hudLabel: UILabel = {
-        let label = UILabel()
-        label.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        label.text = TouchOverlayView.hudDefaultText
-        label.textAlignment = .left
-        label.clipsToBounds = true
-        label.layer.cornerRadius = 8
-        label.isHidden = true
-        return label
-    }()
+    private var hudText = TouchOverlayView.hudDefaultText
 
     private let hudPadding: CGFloat = 12
     private let hudHPad: CGFloat = 12
@@ -41,7 +32,6 @@ final class TouchOverlayView: UIView {
         self.tracker = tracker
         super.init(frame: .zero)
         isOpaque = false
-        addSubview(hudLabel)
         applyHudConfig()
     }
 
@@ -49,54 +39,13 @@ final class TouchOverlayView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        displayLink?.invalidate()
-    }
-
     private func applyHudConfig() {
-        hudLabel.textColor = overlayConfig.hudUITextColor
-        hudLabel.backgroundColor = overlayConfig.hudUIBackgroundColor
-        hudLabel.isHidden = !overlayConfig.showCoordinateHUD
-        setNeedsLayout()
+        setNeedsDisplay()
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        guard overlayConfig.showCoordinateHUD else { return }
-
-        let maxText = "x: 0000  y: 0000  dx: -0000  dy: -0000"
-        let maxSize = maxText.size(withAttributes: [.font: hudLabel.font as Any])
-        let labelWidth = maxSize.width + hudHPad * 2
-        let labelHeight = maxSize.height + hudVPad * 2
-        hudLabel.frame.size = CGSize(width: labelWidth, height: labelHeight)
-
-        let safeTop = safeAreaInsets.top
-        let safeBottom = safeAreaInsets.bottom
-        let safeLeft = safeAreaInsets.left
-        let safeRight = safeAreaInsets.right
-
-        let origin: CGPoint
-        let alignment = overlayConfig.hudAlignment
-        if alignment == .topLeft {
-            origin = CGPoint(x: hudPadding + safeLeft, y: hudPadding + safeTop)
-        } else if alignment == .topRight {
-            origin = CGPoint(
-                x: bounds.width - labelWidth - hudPadding - safeRight, y: hudPadding + safeTop)
-        } else if alignment == .bottomLeft {
-            origin = CGPoint(
-                x: hudPadding + safeLeft, y: bounds.height - labelHeight - hudPadding - safeBottom)
-        } else if alignment == .bottomRight {
-            origin = CGPoint(
-                x: bounds.width - labelWidth - hudPadding - safeRight,
-                y: bounds.height - labelHeight - hudPadding - safeBottom)
-        } else if alignment == .centerLeft {
-            origin = CGPoint(x: hudPadding + safeLeft, y: (bounds.height - labelHeight) / 2)
-        } else {  // .centerRight
-            origin = CGPoint(
-                x: bounds.width - labelWidth - hudPadding - safeRight,
-                y: (bounds.height - labelHeight) / 2)
-        }
-        hudLabel.frame.origin = origin
+        setNeedsDisplay()
     }
 
     // MARK: - Touch lifecycle helpers
@@ -106,75 +55,39 @@ final class TouchOverlayView: UIView {
         startPoint = point
         cachedBoundingBox = nil
         cachedBboxVersion = -1
-        resetFade()
         updateHudText(current: point)
-        setNeedsDisplay()
+        requestImmediateDisplay()
     }
 
     func notifyTouchMove(to point: CGPoint) {
         isTouchActive = true
         updateHudText(current: point)
-        setNeedsDisplay()
+        requestImmediateDisplay()
     }
 
-    func notifyTouchEnd(at point: CGPoint) {
+    func notifyTouchEnd(at _: CGPoint) {
         isTouchActive = false
-        updateHudText(current: point)
-        startFadeIfNeeded()
-        setNeedsDisplay()
+        resetOverlayState(clearPoints: true)
     }
 
     func notifyTouchCancel() {
-        displayLink?.invalidate()
-        displayLink = nil
-        tracker.clearPoints()
+        resetOverlayState(clearPoints: true)
+    }
+
+    private func resetOverlayState(clearPoints: Bool) {
+        if clearPoints {
+            tracker.clearPoints()
+        }
         isTouchActive = false
-        fadeStart = nil
-        drawingOpacity = 1.0
         startPoint = nil
         cachedBoundingBox = nil
         cachedBboxVersion = -1
-        hudLabel.text = Self.hudDefaultText
-        setNeedsLayout()
+        hudText = Self.hudDefaultText
+        requestImmediateDisplay()
+    }
+
+    private func requestImmediateDisplay() {
         setNeedsDisplay()
-    }
-
-    private func resetFade() {
-        displayLink?.invalidate()
-        displayLink = nil
-        drawingOpacity = 1.0
-        fadeStart = nil
-    }
-
-    private func startFadeIfNeeded() {
-        guard overlayConfig.style.fadeOutMs > 0 else { return }
-        fadeStart = Date()
-        displayLink?.invalidate()
-        let link = CADisplayLink(target: self, selector: #selector(fadeStep))
-        link.add(to: .main, forMode: .common)
-        displayLink = link
-    }
-
-    @objc private func fadeStep() {
-        guard let fadeStart = fadeStart else {
-            displayLink?.invalidate()
-            displayLink = nil
-            return
-        }
-        let elapsed = Date().timeIntervalSince(fadeStart)
-        let duration = TimeInterval(overlayConfig.style.fadeOutMs) / 1000.0
-        let t = min(Float(elapsed / duration), 1.0)
-        drawingOpacity = 1.0 - t
-        setNeedsDisplay()
-        if t >= 1.0 {
-            displayLink?.invalidate()
-            displayLink = nil
-            tracker.clearPoints()
-            isTouchActive = false
-            startPoint = nil
-            hudLabel.text = Self.hudDefaultText
-            setNeedsLayout()
-        }
     }
 
     private func updateHudText(current: CGPoint) {
@@ -182,7 +95,7 @@ final class TouchOverlayView: UIView {
         let sp = startPoint ?? current
         let dx = current.x - sp.x
         let dy = current.y - sp.y
-        hudLabel.text = "x: \(Int(current.x))  y: \(Int(current.y))  dx: \(Int(dx))  dy: \(Int(dy))"
+        hudText = "x: \(Int(current.x))  y: \(Int(current.y))  dx: \(Int(dx))  dy: \(Int(dy))"
     }
 
     func clearCaches() {
@@ -191,18 +104,7 @@ final class TouchOverlayView: UIView {
     }
 
     func clearCanvas() {
-        displayLink?.invalidate()
-        displayLink = nil
-        tracker.clearPoints()
-        isTouchActive = false
-        fadeStart = nil
-        drawingOpacity = 1.0
-        startPoint = nil
-        cachedBoundingBox = nil
-        cachedBboxVersion = -1
-        hudLabel.text = Self.hudDefaultText
-        setNeedsLayout()
-        setNeedsDisplay()
+        resetOverlayState(clearPoints: true)
     }
 
     // MARK: - Drawing
@@ -213,12 +115,12 @@ final class TouchOverlayView: UIView {
                 return
             #endif
         }
-        guard drawingOpacity > 0 else { return }
+
+        drawHud(in: rect)
+
         let points = tracker.currentPoints
         guard !points.isEmpty else { return }
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
-
-        ctx.setAlpha(CGFloat(drawingOpacity))
 
         // --- Tap dot (single-point or near-zero-distance gesture, matching Android's isTap logic) ---
         let first = points[0]
@@ -320,6 +222,70 @@ final class TouchOverlayView: UIView {
             boxPath.lineWidth = max(2.0, overlayConfig.style.strokeWidth / 2.0)
             boxPath.stroke()
         }
+    }
+
+    private func drawHud(in _: CGRect) {
+        guard overlayConfig.showCoordinateHUD else { return }
+
+        let frame = hudFrame()
+        let bgPath = UIBezierPath(roundedRect: frame, cornerRadius: Self.hudCornerRadius)
+        overlayConfig.hudUIBackgroundColor.setFill()
+        bgPath.fill()
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: Self.hudFont,
+            .foregroundColor: overlayConfig.hudUITextColor,
+        ]
+        let textRect = frame.insetBy(dx: hudHPad, dy: hudVPad)
+        let textSize = hudText.size(withAttributes: attributes)
+        let textPoint = CGPoint(
+            x: textRect.minX,
+            y: textRect.minY + max(0, (textRect.height - textSize.height) / 2.0)
+        )
+        hudText.draw(at: textPoint, withAttributes: attributes)
+    }
+
+    private func hudFrame() -> CGRect {
+        let width = Self.hudMaxSize.width + hudHPad * 2
+        let height = Self.hudMaxSize.height + hudVPad * 2
+
+        let safeTop = safeAreaInsets.top
+        let safeBottom = safeAreaInsets.bottom
+        let safeLeft = safeAreaInsets.left
+        let safeRight = safeAreaInsets.right
+
+        let origin: CGPoint
+        let alignment = overlayConfig.hudAlignment
+        if alignment == .topLeft {
+            origin = CGPoint(x: hudPadding + safeLeft, y: hudPadding + safeTop)
+        } else if alignment == .topRight {
+            origin = CGPoint(
+                x: bounds.width - width - hudPadding - safeRight,
+                y: hudPadding + safeTop
+            )
+        } else if alignment == .bottomLeft {
+            origin = CGPoint(
+                x: hudPadding + safeLeft,
+                y: bounds.height - height - hudPadding - safeBottom
+            )
+        } else if alignment == .bottomRight {
+            origin = CGPoint(
+                x: bounds.width - width - hudPadding - safeRight,
+                y: bounds.height - height - hudPadding - safeBottom
+            )
+        } else if alignment == .centerLeft {
+            origin = CGPoint(
+                x: hudPadding + safeLeft,
+                y: (bounds.height - height) / 2
+            )
+        } else {  // .centerRight
+            origin = CGPoint(
+                x: bounds.width - width - hudPadding - safeRight,
+                y: (bounds.height - height) / 2
+            )
+        }
+
+        return CGRect(origin: origin, size: CGSize(width: width, height: height))
     }
 }
 #endif

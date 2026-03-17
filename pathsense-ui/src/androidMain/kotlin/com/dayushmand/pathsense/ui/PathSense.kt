@@ -162,6 +162,7 @@ object PathSense {
             originalCallback = originalCallback,
             focusListener = focusListener,
         )
+        promoteOverlay(attachment)
         val interceptor = TouchInterceptWindowCallback(
             wrapped = originalCallback,
             tracker = tracker,
@@ -223,6 +224,7 @@ object PathSense {
             originalCallback = originalCallback,
             focusListener = focusListener,
         )
+        promoteOverlay(attachment)
         val interceptor = TouchInterceptWindowCallback(
             wrapped = originalCallback,
             tracker = tracker,
@@ -322,6 +324,12 @@ object PathSense {
 
     private fun showOverlay(attachment: Attachment) {
         attachment.overlay.visibility = View.VISIBLE
+        promoteOverlay(attachment)
+    }
+
+    private fun promoteOverlay(attachment: Attachment) {
+        attachment.overlay.elevation = OVERLAY_PRIORITY_Z
+        attachment.overlay.translationZ = OVERLAY_PRIORITY_Z
         attachment.hostView.bringChildToFront(attachment.overlay)
     }
 
@@ -335,6 +343,8 @@ object PathSense {
             }
             showOverlay(attachment)
             activeAttachment = attachment
+        } else {
+            promoteOverlay(attachment)
         }
     }
 
@@ -457,4 +467,5 @@ object PathSense {
     }
 
     private val WINDOW_FIELD_NAMES = arrayOf("mWindow", "mPhoneWindow")
+    internal const val OVERLAY_PRIORITY_Z = 10_000f
 }

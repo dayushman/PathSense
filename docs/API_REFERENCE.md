@@ -93,7 +93,7 @@ tracker.addRecognizer(customRecognizer)
 | `gradientEndColor`   | `0xFF007AFF` (blue) | Trail gradient end color                                       |
 | `strokeWidthPx`      | `4f`                | Trail stroke width                                             |
 | `strokeCap`          | `ROUND`             | Stroke cap style: `BUTT`, `ROUND`, `SQUARE`                    |
-| `fadeOutMs`          | `300`               | Fade-out duration after finger lifts (0 = stays until cleared) |
+| `fadeOutMs`          | `300`               | Compatibility field; current SDK overlays clear immediately on finger-up/cancel |
 | `showBoundingBox`    | `false`             | Draw bounding box around the path                              |
 | `boundingBoxColor`   | `0x4400FF00`        | Bounding box color                                             |
 
