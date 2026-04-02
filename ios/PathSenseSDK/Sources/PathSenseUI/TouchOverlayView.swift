@@ -225,7 +225,7 @@ final class TouchOverlayView: UIView {
     }
 
     private func drawHud(in _: CGRect) {
-        guard overlayConfig.showCoordinateHUD else { return }
+        guard overlayConfig.showCoordinateHUD, isTouchActive else { return }
 
         let frame = hudFrame()
         let bgPath = UIBezierPath(roundedRect: frame, cornerRadius: Self.hudCornerRadius)

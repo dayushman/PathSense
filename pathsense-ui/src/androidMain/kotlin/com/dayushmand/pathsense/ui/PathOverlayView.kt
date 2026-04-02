@@ -140,7 +140,7 @@ class PathOverlayView @JvmOverloads constructor(
             cornerRadius = 8 * dp
         }
         hudLabel.background = bg
-        hudLabel.visibility = if (overlayConfig.showCoordinateHUD) View.VISIBLE else View.GONE
+        hudLabel.visibility = if (overlayConfig.showCoordinateHUD && isTouchActive) View.VISIBLE else View.GONE
 
         // Position via layout gravity
         val lp = hudLabel.layoutParams as? LayoutParams ?: return
@@ -166,6 +166,7 @@ class PathOverlayView @JvmOverloads constructor(
         cachedPointsVersion = -1
         cachedBoundingBox = null
         cachedBboxVersion = -1
+        if (overlayConfig.showCoordinateHUD) hudLabel.visibility = View.VISIBLE
         updateHudText(point)
         invalidate()
     }
@@ -202,6 +203,7 @@ class PathOverlayView @JvmOverloads constructor(
         cachedPointsVersion = -1
         cachedBoundingBox = null
         cachedBboxVersion = -1
+        hudLabel.visibility = View.GONE
         hudLabel.text = HUD_DEFAULT
         invalidate()
     }

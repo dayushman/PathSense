@@ -241,8 +241,8 @@ fun PathOverlay(
             }
         }
 
-        // Coordinate HUD label — real Text composable (matches GesturePathKit's coordinateLabel)
-        if (overlayConfig.showCoordinateHUD) {
+        // Coordinate HUD label — only visible while crosshair is showing (touch active)
+        if (overlayConfig.showCoordinateHUD && (isTouchActive?.value ?: false)) {
             val alignment = when (overlayConfig.hudAlignment) {
                 HUDAlignment.TOP_LEFT -> Alignment.TopStart
                 HUDAlignment.TOP_RIGHT -> Alignment.TopEnd
