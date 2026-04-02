@@ -109,6 +109,12 @@ public final class PathSenseTrackingWindow: UIWindow {
 
         guard isCaptureEnabled, tracker.captureEnabled else { return }
         guard event.type == .touches, let touches = event.allTouches else { return }
+        guard !isSystemUIPresented else {
+            cancelTrackedTouchIfNeeded()
+            if !overlayView.isHidden { overlayView.isHidden = true }
+            return
+        }
+        if overlayView.isHidden { overlayView.isHidden = false }
 
         for touch in touches where touch.type == .direct {
             switch touch.phase {
@@ -180,6 +186,27 @@ public final class PathSenseTrackingWindow: UIWindow {
         }
     }
 
+    /// Returns true when a system/native controller (e.g. photo picker, share sheet)
+    /// is presented on top of the app's root view controller.
+    private var isSystemUIPresented: Bool {
+        guard let root = rootViewController else { return false }
+        var presented = root.presentedViewController
+        while let vc = presented {
+            let vcType = String(describing: type(of: vc))
+            let bundle = Bundle(for: type(of: vc))
+            // System frameworks live outside the main bundle
+            if bundle != Bundle.main || vcType.hasPrefix("PUPhotoPickerHost")
+                || vcType.hasPrefix("UIImagePicker")
+                || vcType.hasPrefix("_UIActivityView")
+                || vcType.hasPrefix("UIDocumentPicker")
+                || vcType.hasPrefix("SFSafariView") {
+                return true
+            }
+            presented = vc.presentedViewController
+        }
+        return false
+    }
+
     private var needsPromote = false
 
     private func promoteOverlayIfNeeded() {
@@ -190,6 +217,9 @@ public final class PathSenseTrackingWindow: UIWindow {
 
     private func promoteOverlay() {
         guard overlayView.superview === self else { return }
+        // Don't promote over system UI (photo picker, share sheet, etc.)
+        // as it breaks their touch handling.
+        guard !isSystemUIPresented else { return }
         overlayView.layer.zPosition = Self.overlayPriorityZ
         super.bringSubviewToFront(overlayView)
     }
