@@ -115,6 +115,7 @@ public final class PathSenseTrackingWindow: UIWindow {
             return
         }
         if overlayView.isHidden { overlayView.isHidden = false }
+        promoteOverlayIfNeeded()
 
         for touch in touches where touch.type == .direct {
             switch touch.phase {
@@ -192,19 +193,34 @@ public final class PathSenseTrackingWindow: UIWindow {
         guard let root = rootViewController else { return false }
         var presented = root.presentedViewController
         while let vc = presented {
-            let vcType = String(describing: type(of: vc))
-            let bundle = Bundle(for: type(of: vc))
-            // System frameworks live outside the main bundle
-            if bundle != Bundle.main || vcType.hasPrefix("PUPhotoPickerHost")
-                || vcType.hasPrefix("UIImagePicker")
-                || vcType.hasPrefix("_UIActivityView")
-                || vcType.hasPrefix("UIDocumentPicker")
-                || vcType.hasPrefix("SFSafariView") {
-                return true
-            }
+            if isSystemUIController(vc) { return true }
             presented = vc.presentedViewController
         }
         return false
+    }
+
+    private func isSystemUIController(_ vc: UIViewController) -> Bool {
+        let vcType = String(describing: type(of: vc))
+        // Explicit system UI types that break with overlay touch interception
+        if vcType.hasPrefix("PUPhotoPickerHost")
+            || vcType.hasPrefix("UIImagePicker")
+            || vcType.hasPrefix("_UIActivityView")
+            || vcType.hasPrefix("UIDocumentPicker")
+            || vcType.hasPrefix("SFSafariView")
+            || vcType.hasPrefix("PHPicker") {
+            return true
+        }
+        // Standard UIKit containers commonly used by apps — not system UI
+        if vc is UINavigationController
+            || vc is UITabBarController
+            || vc is UIPageViewController
+            || vc is UISplitViewController
+            || vc is UIAlertController {
+            return false
+        }
+        // Fallback: non-main-bundle VCs are likely system frameworks
+        let bundle = Bundle(for: type(of: vc))
+        return bundle != Bundle.main
     }
 
     private var needsPromote = false

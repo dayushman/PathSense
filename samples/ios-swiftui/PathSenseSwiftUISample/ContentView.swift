@@ -84,6 +84,16 @@ struct ContentView: View {
                     .padding(.leading, 24)
                     .padding(.bottom, 24)
 
+                    Button(action: presentDummyModal) {
+                        Image(systemName: "rectangle.portrait.on.rectangle.portrait")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.orange)
+                            .clipShape(Circle())
+                    }
+                    .padding(.bottom, 24)
+
                     Spacer()
 
                     Button(action: clearPathIfPossible) {
@@ -101,6 +111,39 @@ struct ContentView: View {
         }
     }
 
+    private func presentDummyModal() {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { return }
+
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+
+        let dummyVC = UIViewController()
+        dummyVC.view.backgroundColor = .systemGroupedBackground
+        let label = UILabel()
+        label.text = "Presented VC — draw here to test overlay"
+        label.font = .preferredFont(forTextStyle: .headline)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+        dummyVC.view.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: dummyVC.view.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: dummyVC.view.centerYAnchor),
+        ])
+        dummyVC.title = "Modal Test"
+
+        let nav = UINavigationController(rootViewController: dummyVC)
+        dummyVC.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: nav,
+            action: #selector(UIViewController.dismissSelf)
+        )
+        topVC.present(nav, animated: true)
+    }
+
     private func clearPathIfPossible() {
         #if DEBUG
             guard
@@ -109,5 +152,11 @@ struct ContentView: View {
             else { return }
             window.clearCanvas()
         #endif
+    }
+}
+
+private extension UIViewController {
+    @objc func dismissSelf() {
+        dismiss(animated: true)
     }
 }
