@@ -28,6 +28,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+                api(project(":pathsense-core"))
+                api(project(":pathsense-ui"))
             }
         }
         val commonTest by getting {
