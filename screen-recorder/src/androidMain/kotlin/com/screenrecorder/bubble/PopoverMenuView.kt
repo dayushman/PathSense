@@ -25,6 +25,8 @@ internal class PopoverMenuView(
     private val onStartRecording: () -> Unit,
     private val onGetMoreInfo: () -> Unit,
     private val onAudioToggle: (Boolean) -> Unit,
+    pathSenseEnabled: Boolean,
+    private val onPathSenseToggle: (Boolean) -> Unit,
     private val onDismiss: () -> Unit,
 ) : FrameLayout(context) {
 
@@ -37,6 +39,7 @@ internal class PopoverMenuView(
     private val gap = (4 * dp).toInt()
 
     private var isAudioEnabled = audioEnabled
+    private var isPathSenseEnabled = pathSenseEnabled
     private val card: LinearLayout
     private val nibView: View
 
@@ -53,7 +56,7 @@ internal class PopoverMenuView(
         nibView = ArrowNibView(context, pointsRight = isBubbleOnRight)
 
         val bubbleCenterY = bubbleTop + bubbleSize / 2
-        val cardHeight = rowHeight * 3 + (1 * 2) // 3 rows + 2 dividers (1px each)
+        val cardHeight = rowHeight * 4 + (1 * 3) // 4 rows + 3 dividers (1px each)
         val cardTop = (bubbleCenterY - cardHeight / 2).coerceIn((24 * dp).toInt(), context.resources.displayMetrics.heightPixels - cardHeight - (24 * dp).toInt())
 
         val cardLeft: Int
@@ -154,6 +157,8 @@ internal class PopoverMenuView(
             ))
             addView(buildDivider())
             addView(buildAudioRow())
+            addView(buildDivider())
+            addView(buildPathSenseRow())
         }
     }
 
@@ -218,6 +223,39 @@ internal class PopoverMenuView(
             val toggle = PillToggleView(context, isAudioEnabled) { enabled ->
                 isAudioEnabled = enabled
                 onAudioToggle(enabled)
+            }
+            addView(toggle, LinearLayout.LayoutParams(
+                (42 * dp).toInt(), (24 * dp).toInt(),
+            ))
+
+            setOnClickListener {
+                toggle.toggle()
+            }
+        }
+    }
+
+    private fun buildPathSenseRow(): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding((16 * dp).toInt(), 0, (16 * dp).toInt(), 0)
+            minimumHeight = rowHeight
+
+            val iconSize = (20 * dp).toInt()
+            addView(CrosshairIconView(context), LinearLayout.LayoutParams(iconSize, iconSize).apply {
+                marginEnd = (12 * dp).toInt()
+            })
+
+            addView(TextView(context).apply {
+                text = "PathSense"
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+            val toggle = PillToggleView(context, isPathSenseEnabled) { enabled ->
+                isPathSenseEnabled = enabled
+                onPathSenseToggle(enabled)
             }
             addView(toggle, LinearLayout.LayoutParams(
                 (42 * dp).toInt(), (24 * dp).toInt(),
@@ -312,6 +350,25 @@ internal class PopoverMenuView(
             canvas.drawRect(cx - standW, bodyBottom + height * 0.12f, cx + standW, height * 0.78f, paint)
             // Base
             canvas.drawRoundRect(cx - bodyW * 0.8f, height * 0.78f, cx + bodyW * 0.8f, height * 0.84f, 2f, 2f, paint)
+        }
+    }
+
+    private class CrosshairIconView(context: Context) : View(context) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFF00FF.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            val cx = width / 2f
+            val cy = height / 2f
+            val r = width * 0.35f
+            // Circle
+            canvas.drawCircle(cx, cy, r, paint)
+            // Crosshair lines
+            canvas.drawLine(cx, cy - r - 3f, cx, cy + r + 3f, paint)
+            canvas.drawLine(cx - r - 3f, cy, cx + r + 3f, cy, paint)
         }
     }
 
