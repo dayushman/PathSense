@@ -13,6 +13,9 @@ internal class RecordingOrchestrator(
     private val durationTimer: DurationTimer,
     private val scope: CoroutineScope,
 ) {
+    val currentInternalState: InternalState
+        get() = stateMachine.state.value
+
     private var sessionId: String = ""
 
     init {

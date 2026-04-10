@@ -39,6 +39,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+                implementation("androidx.activity:activity-ktx:1.9.0")
             }
         }
         val iosMain by creating {
