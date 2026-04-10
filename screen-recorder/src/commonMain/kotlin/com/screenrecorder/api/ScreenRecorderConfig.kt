@@ -8,6 +8,7 @@ data class ScreenRecorderConfig(
     var maxDurationSec: Int = 300,
     var outputFormat: OutputFormat = OutputFormat.MP4,
     var listener: ((RecordingEvent) -> Unit)? = null,
+    var pathSenseEnabled: Boolean = true,
 ) {
     constructor() : this(
         tintColor = 0xFFFF3B30,
@@ -17,6 +18,7 @@ data class ScreenRecorderConfig(
         maxDurationSec = 300,
         outputFormat = OutputFormat.MP4,
         listener = null,
+        pathSenseEnabled = true,
     )
 }
 

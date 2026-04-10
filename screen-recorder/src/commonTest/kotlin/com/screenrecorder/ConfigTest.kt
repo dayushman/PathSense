@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ConfigTest {
 
@@ -56,6 +57,12 @@ class ConfigTest {
         assertNull(config.listener)
     }
 
+    @Test
+    fun defaultConfig_hasPathSenseEnabled() {
+        val config = ScreenRecorderConfig()
+        assertTrue(config.pathSenseEnabled)
+    }
+
     // ── No-arg constructor matches parameterized defaults ───────────────
 
     @Test
@@ -69,6 +76,7 @@ class ConfigTest {
             maxDurationSec = 300,
             outputFormat = OutputFormat.MP4,
             listener = null,
+            pathSenseEnabled = true,
         )
         assertEquals(parameterized.tintColor, noArg.tintColor)
         assertEquals(parameterized.bubblePosition, noArg.bubblePosition)
@@ -77,6 +85,7 @@ class ConfigTest {
         assertEquals(parameterized.maxDurationSec, noArg.maxDurationSec)
         assertEquals(parameterized.outputFormat, noArg.outputFormat)
         assertEquals(parameterized.listener, noArg.listener)
+        assertEquals(parameterized.pathSenseEnabled, noArg.pathSenseEnabled)
     }
 
     // ── Enum values exist ───────────────────────────────────────────────
