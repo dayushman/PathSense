@@ -151,6 +151,16 @@ actual class ScreenRecorder {
                             if (enabled) PathSense.enable() else PathSense.disable()
                         }
                     },
+                    onLongPress = {
+                        Log.d("ScreenRecorderSDK", "Long press — stopping everything")
+                        if (state == RecordingState.RECORDING) {
+                            orchestrator?.onBubbleTapStop()
+                            bubbleManager?.setRecording(false)
+                            application?.let { ScreenRecorderService.stop(it) }
+                        }
+                        PathSense.disable()
+                        hide()
+                    },
                 )
             }
             bubbleManager?.attach()

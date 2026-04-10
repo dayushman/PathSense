@@ -69,6 +69,10 @@ public final class BubbleViewController: UIViewController {
     private func setupDragGesture() {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleDrag(_:)))
         bubbleButton.addGestureRecognizer(pan)
+
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        bubbleButton.addGestureRecognizer(longPress)
     }
 
     @objc private func bubbleTapped() {
@@ -135,6 +139,17 @@ public final class BubbleViewController: UIViewController {
     private func dismissPopoverImmediate() {
         popoverView?.removeFromSuperview()
         popoverView = nil
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        if isRecording {
+            ScreenRecorder.companion.onBubbleTapStop()
+            setRecording(false)
+        }
+        BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = false
+        BubbleWindowHolder.shared.trackingWindow?.isHidden = true
+        BubbleWindowHolder.shared.window?.isHidden = true
     }
 
     @objc private func handleDrag(_ gesture: UIPanGestureRecognizer) {

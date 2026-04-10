@@ -16,6 +16,7 @@ internal class BubbleManager(
     private val onAudioToggle: (Boolean) -> Unit,
     initialPathSenseEnabled: Boolean,
     private val onPathSenseToggle: (Boolean) -> Unit,
+    private val onLongPress: () -> Unit,
 ) {
     private var windowManager: WindowManager? = null
     private var bubbleView: BubbleView? = null
@@ -37,6 +38,7 @@ internal class BubbleManager(
             onRecordTap = { showPopover() },
             onStopTap = onStopTap,
             onDragStart = { hidePopover() },
+            onLongPress = onLongPress,
         )
 
         val params = WindowManager.LayoutParams(

@@ -4,6 +4,8 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -18,6 +20,7 @@ internal class BubbleView(
     private val onRecordTap: () -> Unit,
     private val onStopTap: () -> Unit,
     private val onDragStart: () -> Unit,
+    private val onLongPress: () -> Unit,
 ) : FrameLayout(context) {
 
     private val bubbleSize = (44 * context.resources.displayMetrics.density).toInt()
@@ -27,10 +30,19 @@ internal class BubbleView(
 
     private var isRecording = false
     private var isDragging = false
+    private var longPressTriggered = false
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private var initialX = 0
     private var initialY = 0
+
+    private val longPressHandler = Handler(Looper.getMainLooper())
+    private val longPressRunnable = Runnable {
+        if (!isDragging) {
+            longPressTriggered = true
+            onLongPress()
+        }
+    }
 
     private val durationLabel: TextView
     private var pulseAnimator: ValueAnimator? = null
@@ -114,10 +126,12 @@ internal class BubbleView(
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 isDragging = false
+                longPressTriggered = false
                 lastTouchX = event.rawX
                 lastTouchY = event.rawY
                 initialX = params.x
                 initialY = params.y
+                longPressHandler.postDelayed(longPressRunnable, 500)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -125,6 +139,7 @@ internal class BubbleView(
                 val dy = event.rawY - lastTouchY
                 if (!isDragging && (dx * dx + dy * dy) > 100) {
                     isDragging = true
+                    longPressHandler.removeCallbacks(longPressRunnable)
                     onDragStart()
                 }
                 if (isDragging) {
@@ -135,11 +150,18 @@ internal class BubbleView(
                 return true
             }
             MotionEvent.ACTION_UP -> {
-                if (!isDragging) {
+                longPressHandler.removeCallbacks(longPressRunnable)
+                if (longPressTriggered) {
+                    // Long press already handled
+                } else if (!isDragging) {
                     if (isRecording) onStopTap() else onRecordTap()
                 } else {
                     snapToEdge(params, wm)
                 }
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                longPressHandler.removeCallbacks(longPressRunnable)
                 return true
             }
         }
