@@ -1,5 +1,6 @@
 import UIKit
 import ScreenRecorderCore
+import PathSenseUI
 
 public final class BubbleViewController: UIViewController {
     private let config: ScreenRecorderConfig
@@ -74,6 +75,7 @@ public final class BubbleViewController: UIViewController {
         if isRecording {
             ScreenRecorder.companion.onBubbleTapStop()
             setRecording(false)
+            BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = false
         } else {
             if popoverView != nil {
                 dismissPopover()
@@ -93,17 +95,26 @@ public final class BubbleViewController: UIViewController {
             bubbleCenter: bubbleButton.center,
             isBubbleOnRight: isBubbleOnRight,
             audioEnabled: config.audioEnabled,
+            pathSenseEnabled: config.pathSenseEnabled,
             onStartRecording: { [weak self] in
                 self?.dismissPopoverImmediate()
                 ScreenRecorder.companion.onBubbleTapRecord()
                 self?.setRecording(true)
+                if self?.config.pathSenseEnabled == true {
+                    BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = true
+                }
             },
             onGetMoreInfo: { [weak self] in
                 self?.dismissPopover()
-                // No-op for now
             },
             onAudioToggle: { [weak self] enabled in
                 self?.config.audioEnabled = enabled
+            },
+            onPathSenseToggle: { [weak self] enabled in
+                self?.config.pathSenseEnabled = enabled
+                if self?.isRecording == true {
+                    BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = enabled
+                }
             },
             onDismiss: { [weak self] in
                 self?.dismissPopover()
