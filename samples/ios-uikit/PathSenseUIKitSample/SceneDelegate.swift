@@ -3,11 +3,12 @@ import UIKit
 import PathSenseUI
 #endif
 import ScreenRecorderCore
+import ScreenRecorderUI
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    var bubbleWindow: UIWindow?
+    var bubbleWindow: BubbleWindow?
 
     func scene(
         _ scene: UIScene,
@@ -31,16 +32,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Initialize screen recorder
         let recorderConfig = ScreenRecorderConfig()
         recorderConfig.audioEnabled = false
-        recorderConfig.listener = { event in
+        recorderConfig.listener = { [weak self] event in
             if let started = event as? RecordingEvent.RecordingStarted {
                 print("[ScreenRecorder] Recording started: \(started.sessionId)")
             } else if let stopped = event as? RecordingEvent.RecordingStopped {
                 print("[ScreenRecorder] Saved to: \(stopped.file.path)")
+                DispatchQueue.main.async {
+                    if let vc = self?.window?.rootViewController {
+                        RecordingShareSheet.show(from: vc, file: stopped.file)
+                    }
+                }
             } else if let failed = event as? RecordingEvent.RecordingFailed {
                 print("[ScreenRecorder] Error: \(failed.error.message)")
             }
         }
         ScreenRecorder.companion.start(config: recorderConfig)
-        ScreenRecorder.companion.show()
+
+        // Create bubble window
+        bubbleWindow = BubbleWindow(windowScene: windowScene, config: recorderConfig)
     }
 }
