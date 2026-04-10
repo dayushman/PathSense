@@ -13,6 +13,7 @@ import com.screenrecorder.permission.MediaProjectionPermissionHelper
 import com.screenrecorder.permission.OverlayPermissionHelper
 import com.screenrecorder.service.ScreenRecorderService
 import com.screenrecorder.service.ScreenRecorderServiceBridge
+import com.screenrecorder.share.ShareBottomSheet
 import kotlinx.coroutines.*
 
 actual class ScreenRecorder {
@@ -49,6 +50,20 @@ actual class ScreenRecorder {
             this.config = config
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+            // Wrap the user's listener to intercept RecordingStopped and show share sheet
+            val userListener = config.listener
+            val wrappedConfig = config.apply {
+                listener = { event ->
+                    userListener?.invoke(event)
+                    if (event is RecordingEvent.RecordingStopped) {
+                        val activity = currentActivity
+                        if (activity != null) {
+                            ShareBottomSheet.show(activity, event.file)
+                        }
+                    }
+                }
+            }
+
             val ctrl = RecordingController()
             ctrl.setContext(application)
             controller = ctrl
@@ -56,7 +71,7 @@ actual class ScreenRecorder {
             val stateMachine = RecordingStateMachine()
             val timer = DurationTimer(scope!!)
 
-            orchestrator = RecordingOrchestrator(config, stateMachine, ctrl, timer, scope!!)
+            orchestrator = RecordingOrchestrator(wrappedConfig, stateMachine, ctrl, timer, scope!!)
 
             // Set up service bridge — stop recording from notification
             ScreenRecorderServiceBridge.onStopRequested = {
