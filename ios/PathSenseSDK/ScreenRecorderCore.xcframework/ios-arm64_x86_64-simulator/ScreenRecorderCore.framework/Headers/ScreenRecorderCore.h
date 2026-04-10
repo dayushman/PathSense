@@ -401,8 +401,8 @@ __attribute__((swift_name("ScreenRecorderConfig")))
 @interface SRCScreenRecorderConfig : SRCBase
 - (instancetype)init __attribute__((swift_name("init()"))) __attribute__((objc_designated_initializer));
 + (instancetype)new __attribute__((availability(swift, unavailable, message="use object initializers instead")));
-- (instancetype)initWithTintColor:(int64_t)tintColor bubblePosition:(SRCBubblePosition *)bubblePosition audioEnabled:(BOOL)audioEnabled videoQuality:(SRCVideoQuality *)videoQuality maxDurationSec:(int32_t)maxDurationSec outputFormat:(SRCOutputFormat *)outputFormat listener:(void (^ _Nullable)(SRCRecordingEvent *))listener __attribute__((swift_name("init(tintColor:bubblePosition:audioEnabled:videoQuality:maxDurationSec:outputFormat:listener:)"))) __attribute__((objc_designated_initializer));
-- (SRCScreenRecorderConfig *)doCopyTintColor:(int64_t)tintColor bubblePosition:(SRCBubblePosition *)bubblePosition audioEnabled:(BOOL)audioEnabled videoQuality:(SRCVideoQuality *)videoQuality maxDurationSec:(int32_t)maxDurationSec outputFormat:(SRCOutputFormat *)outputFormat listener:(void (^ _Nullable)(SRCRecordingEvent *))listener __attribute__((swift_name("doCopy(tintColor:bubblePosition:audioEnabled:videoQuality:maxDurationSec:outputFormat:listener:)")));
+- (instancetype)initWithTintColor:(int64_t)tintColor bubblePosition:(SRCBubblePosition *)bubblePosition audioEnabled:(BOOL)audioEnabled videoQuality:(SRCVideoQuality *)videoQuality maxDurationSec:(int32_t)maxDurationSec outputFormat:(SRCOutputFormat *)outputFormat listener:(void (^ _Nullable)(SRCRecordingEvent *))listener pathSenseEnabled:(BOOL)pathSenseEnabled __attribute__((swift_name("init(tintColor:bubblePosition:audioEnabled:videoQuality:maxDurationSec:outputFormat:listener:pathSenseEnabled:)"))) __attribute__((objc_designated_initializer));
+- (SRCScreenRecorderConfig *)doCopyTintColor:(int64_t)tintColor bubblePosition:(SRCBubblePosition *)bubblePosition audioEnabled:(BOOL)audioEnabled videoQuality:(SRCVideoQuality *)videoQuality maxDurationSec:(int32_t)maxDurationSec outputFormat:(SRCOutputFormat *)outputFormat listener:(void (^ _Nullable)(SRCRecordingEvent *))listener pathSenseEnabled:(BOOL)pathSenseEnabled __attribute__((swift_name("doCopy(tintColor:bubblePosition:audioEnabled:videoQuality:maxDurationSec:outputFormat:listener:pathSenseEnabled:)")));
 - (BOOL)isEqual:(id _Nullable)other __attribute__((swift_name("isEqual(_:)")));
 - (NSUInteger)hash __attribute__((swift_name("hash()")));
 - (NSString *)description __attribute__((swift_name("description()")));
@@ -411,6 +411,7 @@ __attribute__((swift_name("ScreenRecorderConfig")))
 @property void (^ _Nullable listener)(SRCRecordingEvent *) __attribute__((swift_name("listener")));
 @property int32_t maxDurationSec __attribute__((swift_name("maxDurationSec")));
 @property SRCOutputFormat *outputFormat __attribute__((swift_name("outputFormat")));
+@property BOOL pathSenseEnabled __attribute__((swift_name("pathSenseEnabled")));
 @property int64_t tintColor __attribute__((swift_name("tintColor")));
 @property SRCVideoQuality *videoQuality __attribute__((swift_name("videoQuality")));
 @end
@@ -421,6 +422,7 @@ __attribute__((swift_name("VideoQuality")))
 + (instancetype)alloc __attribute__((unavailable));
 + (instancetype)allocWithZone:(struct _NSZone *)zone __attribute__((unavailable));
 - (instancetype)initWithName:(NSString *)name ordinal:(int32_t)ordinal __attribute__((swift_name("init(name:ordinal:)"))) __attribute__((objc_designated_initializer)) __attribute__((unavailable));
+@property (class, readonly) SRCVideoQuality *deviceNative __attribute__((swift_name("deviceNative")));
 @property (class, readonly) SRCVideoQuality *sd480 __attribute__((swift_name("sd480")));
 @property (class, readonly) SRCVideoQuality *hd720 __attribute__((swift_name("hd720")));
 @property (class, readonly) SRCVideoQuality *fhd1080 __attribute__((swift_name("fhd1080")));

@@ -1,5 +1,6 @@
 import UIKit
 import ScreenRecorderCore
+import PathSenseUI
 
 public final class BubbleViewController: UIViewController {
     private let config: ScreenRecorderConfig
@@ -8,6 +9,7 @@ public final class BubbleViewController: UIViewController {
     private var isRecording = false
 
     private let bubbleSize: CGFloat = 44
+    private var popoverView: PopoverMenuView?
 
     init(config: ScreenRecorderConfig) {
         self.config = config
@@ -67,16 +69,87 @@ public final class BubbleViewController: UIViewController {
     private func setupDragGesture() {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleDrag(_:)))
         bubbleButton.addGestureRecognizer(pan)
+
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        bubbleButton.addGestureRecognizer(longPress)
     }
 
     @objc private func bubbleTapped() {
         if isRecording {
             ScreenRecorder.companion.onBubbleTapStop()
             setRecording(false)
+            BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = false
         } else {
-            ScreenRecorder.companion.onBubbleTapRecord()
-            setRecording(true)
+            if popoverView != nil {
+                dismissPopover()
+            } else {
+                showPopover()
+            }
         }
+    }
+
+    private func showPopover() {
+        guard popoverView == nil else { return }
+
+        let screen = UIScreen.main.bounds
+        let isBubbleOnRight = bubbleButton.center.x > screen.width / 2
+
+        let popover = PopoverMenuView(
+            bubbleCenter: bubbleButton.center,
+            isBubbleOnRight: isBubbleOnRight,
+            audioEnabled: config.audioEnabled,
+            pathSenseEnabled: config.pathSenseEnabled,
+            onStartRecording: { [weak self] in
+                self?.dismissPopoverImmediate()
+                ScreenRecorder.companion.onBubbleTapRecord()
+                self?.setRecording(true)
+                if self?.config.pathSenseEnabled == true {
+                    BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = true
+                }
+            },
+            onGetMoreInfo: { [weak self] in
+                self?.dismissPopover()
+            },
+            onAudioToggle: { [weak self] enabled in
+                self?.config.audioEnabled = enabled
+            },
+            onPathSenseToggle: { [weak self] enabled in
+                self?.config.pathSenseEnabled = enabled
+                if self?.isRecording == true {
+                    BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = enabled
+                }
+            },
+            onDismiss: { [weak self] in
+                self?.dismissPopover()
+            }
+        )
+
+        view.addSubview(popover)
+        popoverView = popover
+    }
+
+    private func dismissPopover() {
+        popoverView?.animateOut { [weak self] in
+            self?.popoverView?.removeFromSuperview()
+            self?.popoverView = nil
+        }
+    }
+
+    private func dismissPopoverImmediate() {
+        popoverView?.removeFromSuperview()
+        popoverView = nil
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        if isRecording {
+            ScreenRecorder.companion.onBubbleTapStop()
+            setRecording(false)
+        }
+        BubbleWindowHolder.shared.trackingWindow?.isCaptureEnabled = false
+        BubbleWindowHolder.shared.trackingWindow?.isHidden = true
+        BubbleWindowHolder.shared.window?.isHidden = true
     }
 
     @objc private func handleDrag(_ gesture: UIPanGestureRecognizer) {
@@ -84,6 +157,9 @@ public final class BubbleViewController: UIViewController {
 
         switch gesture.state {
         case .changed:
+            if popoverView != nil {
+                dismissPopoverImmediate()
+            }
             bubbleButton.center = CGPoint(
                 x: bubbleButton.center.x + translation.x,
                 y: bubbleButton.center.y + translation.y
@@ -113,6 +189,7 @@ public final class BubbleViewController: UIViewController {
     }
 
     func setRecording(_ recording: Bool) {
+        dismissPopoverImmediate()
         isRecording = recording
         durationLabel.isHidden = !recording
 
