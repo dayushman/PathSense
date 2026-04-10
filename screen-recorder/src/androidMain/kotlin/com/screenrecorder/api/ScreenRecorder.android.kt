@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import android.util.Log
 import com.screenrecorder.bubble.BubbleManager
 import com.screenrecorder.engine.*
 import com.screenrecorder.permission.MediaProjectionPermissionHelper
@@ -111,11 +112,14 @@ actual class ScreenRecorder {
                 bubbleManager = BubbleManager(
                     context = ctx.applicationContext,
                     tintColor = config?.tintColor ?: 0xFFFF3B30,
-                    onRecordTap = { startRecordingFlow() },
+                    onRecordTap = {
+                        Log.d("ScreenRecorderSDK", "Record tap, state=${orchestrator?.currentInternalState}")
+                        startRecordingFlow()
+                    },
                     onStopTap = {
+                        Log.d("ScreenRecorderSDK", "Stop tap, state=${orchestrator?.currentInternalState}")
                         orchestrator?.onBubbleTapStop()
                         bubbleManager?.setRecording(false)
-                        // Stop the foreground service when recording stops
                         application?.let { ScreenRecorderService.stop(it) }
                     },
                 )

@@ -47,6 +47,9 @@ internal class RecordingOrchestrator(
             }
             InternalState.RECORDING -> {
                 controller.startCapture()
+                // Only emit RecordingStarted and start timer if we're still in RECORDING
+                // (startCapture might have failed and pushed us back to IDLE)
+                if (stateMachine.state.value != InternalState.RECORDING) return
                 emitEvent(RecordingEvent.RecordingStarted(sessionId))
                 durationTimer.start { elapsed ->
                     emitEvent(RecordingEvent.DurationUpdate(sessionId, elapsed))
@@ -58,6 +61,8 @@ internal class RecordingOrchestrator(
                 }
             }
             InternalState.IDLE -> {
+                // Always stop timer when returning to IDLE (covers error paths too)
+                durationTimer.stop()
                 when (action) {
                     is Action.FileReady -> emitEvent(RecordingEvent.RecordingStopped(sessionId, action.file))
                     is Action.Failed -> emitEvent(RecordingEvent.RecordingFailed(sessionId, action.error))

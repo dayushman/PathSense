@@ -7,6 +7,8 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import com.screenrecorder.api.*
 import java.io.File
 
@@ -19,6 +21,7 @@ internal actual class RecordingController {
     private var virtualDisplay: VirtualDisplay? = null
     private var outputFile: File? = null
     private var config: ScreenRecorderConfig? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun setContext(context: Context) {
         this.context = context
@@ -29,8 +32,7 @@ internal actual class RecordingController {
     }
 
     actual fun requestPermissions() {
-        // Permission flow is handled by ScreenRecorderService via Activity result.
-        // The service triggers the permission flow and calls onAction when done.
+        // Permission flow is handled by ScreenRecorder.android.kt via Activity result.
     }
 
     actual fun prepare(config: ScreenRecorderConfig) {
@@ -86,6 +88,18 @@ internal actual class RecordingController {
         val ctx = context ?: return
 
         try {
+            // Android 14+ requires registering a callback before createVirtualDisplay
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                projection.registerCallback(object : MediaProjection.Callback() {
+                    override fun onStop() {
+                        // MediaProjection was revoked by the system
+                        mainHandler.post {
+                            onAction(Action.Failed(RecordingError.SystemUnavailable("MediaProjection stopped by system")))
+                        }
+                    }
+                }, mainHandler)
+            }
+
             val metrics = ctx.resources.displayMetrics
             virtualDisplay = projection.createVirtualDisplay(
                 "ScreenRecorder",
