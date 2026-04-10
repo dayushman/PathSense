@@ -112,8 +112,9 @@ actual class ScreenRecorder {
                 bubbleManager = BubbleManager(
                     context = ctx.applicationContext,
                     tintColor = config?.tintColor ?: 0xFFFF3B30,
-                    onRecordTap = {
-                        Log.d("ScreenRecorderSDK", "Record tap, state=${orchestrator?.currentInternalState}")
+                    initialAudioEnabled = config?.audioEnabled ?: false,
+                    onStartRecording = {
+                        Log.d("ScreenRecorderSDK", "Record tap via popover, state=${orchestrator?.currentInternalState}")
                         startRecordingFlow()
                     },
                     onStopTap = {
@@ -121,6 +122,12 @@ actual class ScreenRecorder {
                         orchestrator?.onBubbleTapStop()
                         bubbleManager?.setRecording(false)
                         application?.let { ScreenRecorderService.stop(it) }
+                    },
+                    onGetMoreInfo = {
+                        // No-op for now — placeholder for future
+                    },
+                    onAudioToggle = { enabled ->
+                        config?.audioEnabled = enabled
                     },
                 )
             }
