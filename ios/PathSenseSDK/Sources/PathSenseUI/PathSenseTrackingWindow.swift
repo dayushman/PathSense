@@ -1,4 +1,3 @@
-#if DEBUG
 import PathSenseCore
 import UIKit
 
@@ -252,4 +251,3 @@ public final class PathSenseTrackingWindow: UIWindow {
 
     private static let overlayPriorityZ: CGFloat = 10_000
 }
-#endif

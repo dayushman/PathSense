@@ -1,0 +1,5 @@
+framework module "ScreenRecorderCore" {
+    umbrella header "ScreenRecorderCore.h"
+    export *
+    module * { export * }
+}
