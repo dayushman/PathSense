@@ -2,7 +2,6 @@ package com.dayushmand.pathsense.sample.view
 
 import android.app.Application
 import android.util.Log
-import com.dayushmand.pathsense.ui.PathSense
 import com.screenrecorder.api.RecordingEvent
 import com.screenrecorder.api.ScreenRecorder
 import com.screenrecorder.api.ScreenRecorderConfig
@@ -10,8 +9,6 @@ import com.screenrecorder.api.ScreenRecorderConfig
 class SampleApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        PathSense.init(this)
-
         ScreenRecorder.init(this, ScreenRecorderConfig().apply {
             audioEnabled = false
             listener = { event ->
