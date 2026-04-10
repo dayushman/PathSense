@@ -17,6 +17,7 @@ internal class BubbleView(
     private val tintColor: Long,
     private val onRecordTap: () -> Unit,
     private val onStopTap: () -> Unit,
+    private val onDragStart: () -> Unit,
 ) : FrameLayout(context) {
 
     private val bubbleSize = (44 * context.resources.displayMetrics.density).toInt()
@@ -124,6 +125,7 @@ internal class BubbleView(
                 val dy = event.rawY - lastTouchY
                 if (!isDragging && (dx * dx + dy * dy) > 100) {
                     isDragging = true
+                    onDragStart()
                 }
                 if (isDragging) {
                     params.x = initialX - dx.toInt()
