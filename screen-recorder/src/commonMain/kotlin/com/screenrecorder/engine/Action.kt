@@ -4,15 +4,15 @@ import com.screenrecorder.api.RecordingError
 import com.screenrecorder.api.RecordingFile
 
 internal sealed class Action {
-    data object TapRecord : Action()
-    data object TapStop : Action()
-    data object PermissionGranted : Action()
-    data object PermissionDenied : Action()
-    data object EncoderReady : Action()
-    data object EncoderStopped : Action()
+    object TapRecord : Action()
+    object TapStop : Action()
+    object PermissionGranted : Action()
+    object PermissionDenied : Action()
+    object EncoderReady : Action()
+    object EncoderStopped : Action()
     data class FileReady(val file: RecordingFile) : Action()
     data class Failed(val error: RecordingError) : Action()
-    data object MaxDuration : Action()
+    object MaxDuration : Action()
 }
 
 internal enum class InternalState {

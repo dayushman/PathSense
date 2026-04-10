@@ -8,8 +8,8 @@ sealed class RecordingEvent {
     data class DurationUpdate(val sessionId: String, val elapsedMs: Long) : RecordingEvent()
     data class RecordingStopped(val sessionId: String, val file: RecordingFile) : RecordingEvent()
     data class RecordingFailed(val sessionId: String, val error: RecordingError) : RecordingEvent()
-    data object BubbleShown : RecordingEvent()
-    data object BubbleHidden : RecordingEvent()
+    object BubbleShown : RecordingEvent()
+    object BubbleHidden : RecordingEvent()
 }
 
 enum class PermissionType { OVERLAY, SCREEN_CAPTURE, MICROPHONE }
