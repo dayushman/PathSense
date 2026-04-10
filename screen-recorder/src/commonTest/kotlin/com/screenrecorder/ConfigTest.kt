@@ -33,9 +33,9 @@ class ConfigTest {
     }
 
     @Test
-    fun defaultConfig_hasVideoQualityHD720() {
+    fun defaultConfig_hasVideoQualityDeviceNative() {
         val config = ScreenRecorderConfig()
-        assertEquals(VideoQuality.HD_720, config.videoQuality)
+        assertEquals(VideoQuality.DEVICE_NATIVE, config.videoQuality)
     }
 
     @Test
@@ -65,7 +65,7 @@ class ConfigTest {
             tintColor = 0xFFFF3B30,
             bubblePosition = BubblePosition.TRAILING_CENTER,
             audioEnabled = false,
-            videoQuality = VideoQuality.HD_720,
+            videoQuality = VideoQuality.DEVICE_NATIVE,
             maxDurationSec = 300,
             outputFormat = OutputFormat.MP4,
             listener = null,
@@ -99,9 +99,9 @@ class ConfigTest {
     @Test
     fun videoQuality_hasAllExpectedValues() {
         val values = VideoQuality.entries
-        assertEquals(3, values.size)
+        assertEquals(4, values.size)
         val names = values.map { it.name }.toSet()
-        assertEquals(setOf("SD_480", "HD_720", "FHD_1080"), names)
+        assertEquals(setOf("DEVICE_NATIVE", "SD_480", "HD_720", "FHD_1080"), names)
     }
 
     @Test

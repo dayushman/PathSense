@@ -4,7 +4,7 @@ data class ScreenRecorderConfig(
     var tintColor: Long = 0xFFFF3B30,
     var bubblePosition: BubblePosition = BubblePosition.TRAILING_CENTER,
     var audioEnabled: Boolean = false,
-    var videoQuality: VideoQuality = VideoQuality.HD_720,
+    var videoQuality: VideoQuality = VideoQuality.DEVICE_NATIVE,
     var maxDurationSec: Int = 300,
     var outputFormat: OutputFormat = OutputFormat.MP4,
     var listener: ((RecordingEvent) -> Unit)? = null,
@@ -13,7 +13,7 @@ data class ScreenRecorderConfig(
         tintColor = 0xFFFF3B30,
         bubblePosition = BubblePosition.TRAILING_CENTER,
         audioEnabled = false,
-        videoQuality = VideoQuality.HD_720,
+        videoQuality = VideoQuality.DEVICE_NATIVE,
         maxDurationSec = 300,
         outputFormat = OutputFormat.MP4,
         listener = null,
@@ -27,6 +27,7 @@ enum class BubblePosition {
 }
 
 enum class VideoQuality(val width: Int, val height: Int, val bitrateMbps: Float) {
+    DEVICE_NATIVE(0, 0, 8f),
     SD_480(854, 480, 2f),
     HD_720(1280, 720, 5f),
     FHD_1080(1920, 1080, 8f),

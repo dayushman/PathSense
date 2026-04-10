@@ -35,12 +35,20 @@ internal actual class RecordingController {
         // Permission flow is handled by ScreenRecorder.android.kt via Activity result.
     }
 
+    private var resolvedWidth: Int = 0
+    private var resolvedHeight: Int = 0
+
     actual fun prepare(config: ScreenRecorderConfig) {
         this.config = config
         val ctx = context ?: run {
             onAction(Action.Failed(RecordingError.SystemUnavailable("Context not available")))
             return
         }
+
+        // Resolve DEVICE_NATIVE to actual screen size
+        val metrics = ctx.resources.displayMetrics
+        resolvedWidth = if (config.videoQuality.width == 0) metrics.widthPixels else config.videoQuality.width
+        resolvedHeight = if (config.videoQuality.height == 0) metrics.heightPixels else config.videoQuality.height
 
         try {
             val dir = File(ctx.cacheDir, "screen-recorder")
@@ -67,7 +75,7 @@ internal actual class RecordingController {
                 if (config.audioEnabled) {
                     setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 }
-                setVideoSize(config.videoQuality.width, config.videoQuality.height)
+                setVideoSize(resolvedWidth, resolvedHeight)
                 setVideoEncodingBitRate((config.videoQuality.bitrateMbps * 1_000_000).toInt())
                 setVideoFrameRate(30)
                 setOutputFile(outputFile!!.absolutePath)
@@ -100,12 +108,12 @@ internal actual class RecordingController {
                 }, mainHandler)
             }
 
-            val metrics = ctx.resources.displayMetrics
+            val displayMetrics = ctx.resources.displayMetrics
             virtualDisplay = projection.createVirtualDisplay(
                 "ScreenRecorder",
-                config!!.videoQuality.width,
-                config!!.videoQuality.height,
-                metrics.densityDpi,
+                resolvedWidth,
+                resolvedHeight,
+                displayMetrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 recorder.surface,
                 null, null
@@ -149,8 +157,8 @@ internal actual class RecordingController {
             path = file.absolutePath,
             durationMs = durationMs,
             fileSizeBytes = file.length(),
-            width = config?.videoQuality?.width ?: 0,
-            height = config?.videoQuality?.height ?: 0,
+            width = resolvedWidth,
+            height = resolvedHeight,
         )))
     }
 
