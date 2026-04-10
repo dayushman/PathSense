@@ -14,6 +14,8 @@ internal class BubbleManager(
     private val onStopTap: () -> Unit,
     private val onGetMoreInfo: () -> Unit,
     private val onAudioToggle: (Boolean) -> Unit,
+    initialPathSenseEnabled: Boolean,
+    private val onPathSenseToggle: (Boolean) -> Unit,
 ) {
     private var windowManager: WindowManager? = null
     private var bubbleView: BubbleView? = null
@@ -21,6 +23,7 @@ internal class BubbleManager(
     private var isAttached = false
     private var isPopoverShown = false
     private var currentAudioEnabled = initialAudioEnabled
+    private var currentPathSenseEnabled = initialPathSenseEnabled
 
     private val dp = context.resources.displayMetrics.density
     private val bubbleSize = (44 * dp).toInt()
@@ -100,6 +103,11 @@ internal class BubbleManager(
             onAudioToggle = { enabled ->
                 currentAudioEnabled = enabled
                 onAudioToggle(enabled)
+            },
+            pathSenseEnabled = currentPathSenseEnabled,
+            onPathSenseToggle = { enabled ->
+                currentPathSenseEnabled = enabled
+                onPathSenseToggle(enabled)
             },
             onDismiss = { hidePopover() },
         )

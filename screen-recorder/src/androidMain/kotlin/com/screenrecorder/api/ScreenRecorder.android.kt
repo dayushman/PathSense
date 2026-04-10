@@ -16,6 +16,9 @@ import com.screenrecorder.service.ScreenRecorderService
 import com.screenrecorder.service.ScreenRecorderServiceBridge
 import com.screenrecorder.share.ShareBottomSheet
 import kotlinx.coroutines.*
+import com.dayushmand.pathsense.core.PathOverlayConfig
+import com.dayushmand.pathsense.ui.PathSense
+import com.dayushmand.pathsense.ui.PathSenseConfig
 
 actual class ScreenRecorder {
     actual companion object {
@@ -95,6 +98,17 @@ actual class ScreenRecorder {
                 }
             })
 
+            // Initialize PathSense with recording overlay config (disabled until recording starts)
+            PathSense.init(application, PathSenseConfig(
+                overlayConfig = PathOverlayConfig(
+                    debugOnly = false,
+                    showCoordinateHUD = true,
+                    showCrosshair = true,
+                    showTouchCircle = true,
+                )
+            ))
+            PathSense.disable()
+
             // Do NOT start the foreground service here.
             // Android 14+ requires MediaProjection consent BEFORE starting
             // a foreground service with mediaProjection type.
@@ -122,12 +136,20 @@ actual class ScreenRecorder {
                         orchestrator?.onBubbleTapStop()
                         bubbleManager?.setRecording(false)
                         application?.let { ScreenRecorderService.stop(it) }
+                        PathSense.disable()
                     },
                     onGetMoreInfo = {
                         // No-op for now — placeholder for future
                     },
                     onAudioToggle = { enabled ->
                         config?.audioEnabled = enabled
+                    },
+                    initialPathSenseEnabled = config?.pathSenseEnabled ?: true,
+                    onPathSenseToggle = { enabled ->
+                        config?.pathSenseEnabled = enabled
+                        if (state == RecordingState.RECORDING) {
+                            if (enabled) PathSense.enable() else PathSense.disable()
+                        }
                     },
                 )
             }
@@ -176,6 +198,9 @@ actual class ScreenRecorder {
                 controller?.setMediaProjection(projection)
                 controller?.onAction?.invoke(Action.PermissionGranted)
                 bubbleManager?.setRecording(true)
+                if (config?.pathSenseEnabled == true) {
+                    PathSense.enable()
+                }
             }
         }
 
