@@ -28,7 +28,7 @@ let package = Package(
         ),
         .target(
             name: "ScreenRecorderUI",
-            dependencies: ["ScreenRecorderCore"],
+            dependencies: ["ScreenRecorderCore", "PathSenseCore", "PathSenseUI"],
             path: "Sources/ScreenRecorderUI"
         ),
         .testTarget(
