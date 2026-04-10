@@ -9,6 +9,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.dayushmand.pathsense.ui.PathSense
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.screenrecorder.api.ScreenRecorder
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,6 +27,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btn_open_bottom_sheet).setOnClickListener {
             showPathSenseBottomSheet()
         }
+
+        // Show screen recorder bubble
+        ScreenRecorder.show()
     }
 
     private fun showPathSenseDialog() {
