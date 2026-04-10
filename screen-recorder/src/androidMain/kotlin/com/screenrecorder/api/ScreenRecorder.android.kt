@@ -22,9 +22,12 @@ actual class ScreenRecorder {
         private var bubbleManager: BubbleManager? = null
         private var config: ScreenRecorderConfig? = null
         private var scope: CoroutineScope? = null
+        private var application: Application? = null
         private var currentActivity: Activity? = null
         private var projectionLauncher: ActivityResultLauncher<Intent>? = null
         private var overlayLauncher: ActivityResultLauncher<Intent>? = null
+        private var pendingProjectionResultCode: Int = 0
+        private var pendingProjectionData: Intent? = null
 
         actual val state: RecordingState
             get() {
@@ -42,6 +45,7 @@ actual class ScreenRecorder {
             }
 
         fun init(application: Application, config: ScreenRecorderConfig = ScreenRecorderConfig()) {
+            this.application = application
             this.config = config
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -54,7 +58,7 @@ actual class ScreenRecorder {
 
             orchestrator = RecordingOrchestrator(config, stateMachine, ctrl, timer, scope!!)
 
-            // Set up service bridge
+            // Set up service bridge — stop recording from notification
             ScreenRecorderServiceBridge.onStopRequested = {
                 orchestrator?.onBubbleTapStop()
             }
@@ -75,8 +79,10 @@ actual class ScreenRecorder {
                 }
             })
 
-            // Start foreground service
-            ScreenRecorderService.start(application)
+            // Do NOT start the foreground service here.
+            // Android 14+ requires MediaProjection consent BEFORE starting
+            // a foreground service with mediaProjection type.
+            // The service starts in onProjectionGranted() after user consent.
         }
 
         actual fun show() {
@@ -91,7 +97,12 @@ actual class ScreenRecorder {
                     context = ctx.applicationContext,
                     tintColor = config?.tintColor ?: 0xFFFF3B30,
                     onRecordTap = { startRecordingFlow() },
-                    onStopTap = { orchestrator?.onBubbleTapStop() },
+                    onStopTap = {
+                        orchestrator?.onBubbleTapStop()
+                        bubbleManager?.setRecording(false)
+                        // Stop the foreground service when recording stops
+                        application?.let { ScreenRecorderService.stop(it) }
+                    },
                 )
             }
             bubbleManager?.attach()
@@ -112,16 +123,34 @@ actual class ScreenRecorder {
             orchestrator = null
             controller = null
             config = null
-            currentActivity?.let { ScreenRecorderService.stop(it) }
+            application?.let { ScreenRecorderService.stop(it) }
+            application = null
         }
 
         private fun startRecordingFlow() {
             orchestrator?.onBubbleTapRecord()
-            // The orchestrator transitions to REQUESTING_PERMISSION.
-            // Now launch the MediaProjection consent dialog.
+            // Launch MediaProjection consent dialog.
+            // The foreground service starts AFTER consent is granted.
             val activity = currentActivity ?: return
             val intent = MediaProjectionPermissionHelper.createScreenCaptureIntent(activity)
             projectionLauncher?.launch(intent)
+        }
+
+        private fun onProjectionGranted(resultCode: Int, data: Intent) {
+            val app = application ?: return
+            // Android 14+: start foreground service AFTER consent, BEFORE getMediaProjection
+            ScreenRecorderService.start(app)
+
+            // Small delay to let the service start before getting the projection
+            scope?.launch {
+                delay(200)
+                val activity = currentActivity ?: return@launch
+                val projectionManager = MediaProjectionPermissionHelper.getProjectionManager(activity)
+                val projection = projectionManager.getMediaProjection(resultCode, data)
+                controller?.setMediaProjection(projection)
+                controller?.onAction?.invoke(Action.PermissionGranted)
+                bubbleManager?.setRecording(true)
+            }
         }
 
         private fun registerPermissionLaunchers(activity: Activity) {
@@ -131,10 +160,7 @@ actual class ScreenRecorder {
                 ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-                    val projectionManager = MediaProjectionPermissionHelper.getProjectionManager(activity)
-                    val projection = projectionManager.getMediaProjection(result.resultCode, result.data!!)
-                    controller?.setMediaProjection(projection)
-                    controller?.onAction?.invoke(Action.PermissionGranted)
+                    onProjectionGranted(result.resultCode, result.data!!)
                 } else {
                     controller?.onAction?.invoke(Action.PermissionDenied)
                 }
