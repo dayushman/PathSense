@@ -1,4 +1,3 @@
-#if DEBUG
 import PathSenseCore
 import UIKit
 
@@ -288,4 +287,3 @@ final class TouchOverlayView: UIView {
         return CGRect(origin: origin, size: CGSize(width: width, height: height))
     }
 }
-#endif
